@@ -1,6 +1,6 @@
-# QBittorrentBot (TypeScript + Bun Edition)
+# Magpie (TypeScript + Bun Edition)
 
-QBittorrentBot is a modular chatbot built on the fast **Bun** runtime that allows you to control your **qBittorrent** client directly through **Telegram** and/or **Discord**. With this bot, you can manage your torrent downloads, add magnet links or upload torrent files, monitor statistics, and toggle speed limits—all from within your chat.
+Magpie is a modular chatbot built on the fast **Bun** runtime that allows you to control your **qBittorrent** client directly through **Telegram** and/or **Discord**. With this bot, you can manage your torrent downloads, add magnet links or upload torrent files, monitor statistics, and toggle speed limits—all from within your chat.
 
 ---
 
@@ -9,10 +9,12 @@ QBittorrentBot is a modular chatbot built on the fast **Bun** runtime that allow
 * **Multi-Platform Support**: Run the bot on Telegram, Discord, or both simultaneously.
 * **QBittorrent Control**:
   * List active, completed, or downloading torrents.
+  * Filter torrents in Discord with a **Download Status Filtering Menu** (📁 All, ⏳ Downloading, ✔️ Completed, ⏸️ Paused).
   * Pause (Stop), Resume (Start), and Delete torrents.
   * Dynamically assign categories.
   * Toggle Alternate Speed Limits.
 * **Robust File Uploads**: Send magnet links directly or upload `.torrent` files to start downloading.
+* **Interactive Recovery**: Includes a **Retry Button** on failed Discord additions to retry adding torrents without resending messages.
 * **Onboarding & Safety Checks**: Avoid startup crashes on missing credentials—the bot checks configured tokens and starts only the active platform(s).
 * **High Performance**: Powered by **Bun** for rapid execution and low memory overhead, using native `fetch` client logic.
 
@@ -20,7 +22,10 @@ QBittorrentBot is a modular chatbot built on the fast **Bun** runtime that allow
 
 ## Configuration
 
-The bot is configured using a `data/config.yml` file. If the file doesn't exist on startup, a default configuration template is automatically generated.
+The bot is configured using a `data/config.yml` file. Copy the provided template to get started:
+```bash
+cp data/config.example.yml data/config.yml
+```
 
 ### YAML Schema (`data/config.yml`)
 
@@ -101,3 +106,15 @@ To run the unit test suite and local integration tests:
 ```bash
 bun test
 ```
+
+---
+
+## Disclaimer
+
+This software is provided for educational and administrative purposes only. The creators and contributors of Magpie are not responsible for any content downloaded or managed via this bot. Users are solely responsible for ensuring that their use of qBittorrent and this bot complies with all applicable copyright laws, local regulations, and terms of service.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
