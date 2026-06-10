@@ -1,0 +1,21 @@
+version = 1
+
+[[apps]]
+name        = "magpie"
+command     = "bun src/main.ts"
+cwd         = "./"
+
+# Restart policy
+restart_policy = "on_failure"
+max_restarts   = 10
+restart_delay  = 5000   # milliseconds between restarts
+min_uptime     = 10     # seconds the process must stay up to count as "started"
+
+# Logging
+out_file        = "./logs/magpie-out.log"
+error_file      = "./logs/magpie-error.log"
+log_date_format = "YYYY-MM-DD HH:mm:ss Z"
+merge_logs      = true
+
+[apps.env]
+NODE_ENV = "production"
