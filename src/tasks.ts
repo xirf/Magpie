@@ -147,6 +147,29 @@ export async function torrentFinished(
             }
           }
         }
+
+        // Apply seeding policy
+        let shouldPause = false;
+        const seedPolicy = settings.seed_after_download || 'always';
+        if (seedPolicy === 'never') {
+          shouldPause = true;
+        } else if (seedPolicy === 'admin_only') {
+          const hasAdmin = targetUsers.some(u => u.role === 'administrator');
+          if (!hasAdmin) {
+            shouldPause = true;
+          }
+        }
+
+        const isUploadedAndDeleted = settings.s3.enabled && settings.s3.mode === 'upload';
+        if (shouldPause && !isUploadedAndDeleted) {
+          try {
+            await manager.pause(torrent.hash);
+            console.log(`[Tasks] Paused completed torrent "${torrent.name}" to stop seeding per policy: ${seedPolicy}`);
+          } catch (pauseErr) {
+            console.error(`[Tasks] Failed to pause torrent "${torrent.name}":`, pauseErr);
+          }
+        }
+
         // Save to redis for 10 days (10 * 86400 seconds)
         await redis.set(torrent.hash, 'true', 10 * 86400);
       }

@@ -39,7 +39,8 @@ import { join } from 'path';
 const mockManager: any = {
   get_torrents: mock(async (hash: string | null, filter: string | null) => []),
   get_torrent: mock(async (hash: string) => null),
-  delete_one_data: mock(async (hash: string) => {})
+  delete_one_data: mock(async (hash: string) => {}),
+  pause: mock(async (hash: string) => {})
 };
 
 ClientRepo.getClientManager = () => mockManager;
@@ -56,6 +57,7 @@ describe('S3 Integration Tests', () => {
     mockManager.get_torrents.mockClear();
     mockManager.get_torrent.mockClear();
     mockManager.delete_one_data.mockClear();
+    mockManager.pause.mockClear();
 
     // Create temp files and directories
     if (existsSync(tempDir)) {
@@ -73,12 +75,13 @@ describe('S3 Integration Tests', () => {
     }
   });
 
-  const createSettings = (s3Overrides: any = {}) => {
+  const createSettings = (overrides: any = {}) => {
+    const { seed_after_download, users, ...s3Overrides } = overrides;
     return new Settings({
       client: { host: 'http://localhost:8080', user: 'admin', password: 'pw' },
       telegram: { enabled: true, bot_token: 'tg-token' },
       discord: { enabled: true, token: 'dc-token' },
-      users: [
+      users: users || [
         {
           user_id: 12345,
           discord_id: 'discord-user-id',
@@ -99,7 +102,8 @@ describe('S3 Integration Tests', () => {
         link_expiry: 1800,
         mode: 'mount',
         ...s3Overrides
-      }
+      },
+      seed_after_download
     });
   };
 
@@ -290,5 +294,61 @@ describe('S3 Integration Tests', () => {
     expect(replyResult.content).toContain('temporary download link');
     expect(replyResult.components[0].components[0].data.label).toBe('Download');
     expect(replyResult.components[0].components[0].data.url).toContain('temp_s3_test/nested/file2.bin');
+  });
+
+  test('torrentFinished respects seed_after_download policy', async () => {
+    const redis = new RedisEmulator();
+    const mockTelegramBot: any = { api: { sendMessage: mock(async () => ({})) } };
+    const mockDiscordClient: any = { users: { fetch: mock(async () => ({ send: mock(async () => ({})) })) } };
+
+    const completedTorrent = {
+      hash: 'test-hash-policy',
+      name: 'temp_s3_test',
+      progress: 1.0,
+      dlspeed: 0,
+      state: 'completed',
+      size: 30,
+      eta: 0,
+      category: null,
+      save_path: join(tempDir, '..'),
+      content_path: tempDir
+    };
+
+    // Test ALWAYS policy
+    mockManager.get_torrents.mockImplementation(async () => [completedTorrent]);
+    const settingsAlways = createSettings({ seed_after_download: 'always' });
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAlways);
+    expect(mockManager.pause).not.toHaveBeenCalled();
+
+    // Test NEVER policy
+    await redis.delete('test-hash-policy');
+    const settingsNever = createSettings({ seed_after_download: 'never' });
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsNever);
+    expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
+
+    // Test ADMIN_ONLY policy with admin user
+    mockManager.pause.mockClear();
+    await redis.delete('test-hash-policy');
+    const settingsAdminOnlyWithAdmin = createSettings({ seed_after_download: 'admin_only' });
+    // settings has an administrator in its users array by default
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyWithAdmin);
+    expect(mockManager.pause).not.toHaveBeenCalled();
+
+    // Test ADMIN_ONLY policy with no admin user (only manager/reader)
+    mockManager.pause.mockClear();
+    await redis.delete('test-hash-policy');
+    const settingsAdminOnlyNoAdmin = createSettings({ seed_after_download: 'admin_only' });
+    settingsAdminOnlyNoAdmin.users = [
+      {
+        user_id: 12345,
+        discord_id: 'discord-user-id',
+        role: 'manager',
+        locale: 'en',
+        notify: true,
+        notification_filter: []
+      }
+    ];
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyNoAdmin);
+    expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
   });
 });

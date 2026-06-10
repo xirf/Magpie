@@ -63,6 +63,7 @@ export class Settings {
   users!: UserSettings[];
   redis!: RedisSettings;
   s3!: S3Settings;
+  seed_after_download!: 'always' | 'never' | 'admin_only';
 
   constructor(data: any) {
     this.updateFrom(data);
@@ -140,6 +141,15 @@ export class Settings {
       link_expiry: newSettings.s3?.link_expiry !== undefined && newSettings.s3?.link_expiry !== null ? Number(newSettings.s3.link_expiry) : 3600,
       mode: newSettings.s3?.mode || 'mount',
     };
+
+    const rawSeed = newSettings.seed_after_download;
+    if (rawSeed === false || rawSeed === 'never') {
+      this.seed_after_download = 'never';
+    } else if (rawSeed === 'admin_only') {
+      this.seed_after_download = 'admin_only';
+    } else {
+      this.seed_after_download = 'always';
+    }
   }
 
   exportSettings() {
@@ -155,6 +165,7 @@ export class Settings {
       users: this.users,
       redis: this.redis,
       s3: this.s3,
+      seed_after_download: this.seed_after_download,
     };
     writeFileSync(ymlPath, yaml.stringify(data, { indent: 2 }), 'utf-8');
   }
@@ -259,7 +270,8 @@ export class Settings {
         region: null,
         link_expiry: 3600,
         mode: 'mount'
-      }
+      },
+      seed_after_download: 'always'
     });
   }
 }

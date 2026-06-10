@@ -160,4 +160,28 @@ describe('Settings', () => {
     expect(s.users[0].user_id).toBe(99999);
     expect(s.users[0].role).toBe('manager');
   });
+
+  test('seed_after_download defaults to always', () => {
+    const s = Settings.getDefaultSettings();
+    expect(s.seed_after_download).toBe('always');
+  });
+
+  test('updateFrom parses seed_after_download values correctly', () => {
+    const s = Settings.getDefaultSettings();
+    
+    s.updateFrom({ seed_after_download: 'never' });
+    expect(s.seed_after_download).toBe('never');
+
+    s.updateFrom({ seed_after_download: false });
+    expect(s.seed_after_download).toBe('never');
+
+    s.updateFrom({ seed_after_download: 'admin_only' });
+    expect(s.seed_after_download).toBe('admin_only');
+
+    s.updateFrom({ seed_after_download: 'always' });
+    expect(s.seed_after_download).toBe('always');
+
+    s.updateFrom({ seed_after_download: true });
+    expect(s.seed_after_download).toBe('always');
+  });
 });
