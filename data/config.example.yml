@@ -1,0 +1,25 @@
+client:
+  type: qbittorrent
+  host: http://localhost:8080/
+  user: admin
+  password: adminadmin
+
+telegram:
+  enabled: false
+  bot_token: PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE
+  proxy: null # Optional SOCKS or HTTP proxy connection string settings
+
+discord:
+  enabled: false
+  token: PUT_YOUR_DISCORD_BOT_TOKEN_HERE
+
+redis:
+  url: null # Optional Redis connection URL (e.g. redis://localhost:6379/0). Defaults to in-memory emulator.
+
+users:
+  # - user_id: 123456789             # Telegram user ID (optional)
+  #   discord_id: 123456789          # Discord User Snowflake ID (optional)
+  #   role: administrator            # Role: administrator, manager, reader
+  #   notify: true                   # Receive DM notification when torrent finishes downloading
+  #   locale: en                     # User language: en, es, it, pt, ru, uk
+  #   notification_filter: []        # Limit notifications to specific qBittorrent categories
