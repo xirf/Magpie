@@ -159,7 +159,7 @@ describe('S3 Integration Tests', () => {
 
   test('torrentFinished in mount mode generates signed link, notifies users, does not delete local files', async () => {
     const settings = createSettings({ mode: 'mount' });
-    const redis = new RedisEmulator();
+    const redis = new RedisEmulator() as any;
     
     mockManager.get_torrents.mockImplementation(async () => [
       {
@@ -194,7 +194,7 @@ describe('S3 Integration Tests', () => {
       }
     };
 
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settings);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settings, mockManager);
 
     // Verify S3 link generated for the largest file (file2.bin in temp_s3_test directory)
     expect(mockGetSignedUrl).toHaveBeenCalled();
@@ -209,10 +209,10 @@ describe('S3 Integration Tests', () => {
     // Discord notification check (should have sent with buttons)
     expect(mockDiscordClient.users.fetch).toHaveBeenCalledWith('discord-user-id');
     expect(mockDiscordUser.send).toHaveBeenCalled();
-    const dcMsg = mockDiscordUser.send.mock.calls[0][0];
-    expect(dcMsg.content).toContain('has finished downloading');
-    expect(dcMsg.components[0].components[0].data.label).toBe('Download');
-    expect(dcMsg.components[0].components[0].data.url).toContain('temp_s3_test/nested/file2.bin');
+    const dcMsg = (mockDiscordUser.send.mock.calls as any[])[0][0];
+    expect(dcMsg?.content).toContain('has finished downloading');
+    expect(dcMsg?.components[0].components[0].data.label).toBe('Download');
+    expect(dcMsg?.components[0].components[0].data.url).toContain('temp_s3_test/nested/file2.bin');
 
     // Local files should NOT be deleted
     expect(mockManager.delete_one_data).not.toHaveBeenCalled();
@@ -222,7 +222,7 @@ describe('S3 Integration Tests', () => {
 
   test('torrentFinished in upload mode uploads to S3, deletes local data, and notifies users', async () => {
     const settings = createSettings({ mode: 'upload' });
-    const redis = new RedisEmulator();
+    const redis = new RedisEmulator() as any;
 
     mockManager.get_torrents.mockImplementation(async () => [
       {
@@ -254,7 +254,7 @@ describe('S3 Integration Tests', () => {
       }
     };
 
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settings);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settings, mockManager);
 
     // Verify upload called
     expect(mockSend).toHaveBeenCalled();
@@ -307,7 +307,7 @@ describe('S3 Integration Tests', () => {
   });
 
   test('torrentFinished respects seed_after_download policy', async () => {
-    const redis = new RedisEmulator();
+    const redis = new RedisEmulator() as any;
     const mockTelegramBot: any = { api: { sendMessage: mock(async () => ({})) } };
     const mockDiscordClient: any = { users: { fetch: mock(async () => ({ send: mock(async () => ({})) })) } };
 
@@ -327,14 +327,14 @@ describe('S3 Integration Tests', () => {
     // Test ALWAYS policy
     mockManager.get_torrents.mockImplementation(async () => [completedTorrent]);
     const settingsAlways = createSettings({ seed_after_download: 'always' });
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAlways);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAlways, mockManager);
     expect(mockManager.pause).not.toHaveBeenCalled();
 
     // Test NEVER policy
     await redis.delete('test-hash-policy');
     getDatabase().run("DELETE FROM notifications WHERE hash = 'test-hash-policy'");
     const settingsNever = createSettings({ seed_after_download: 'never' });
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsNever);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsNever, mockManager);
     expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
 
     // Test ADMIN_ONLY policy with admin user
@@ -343,7 +343,7 @@ describe('S3 Integration Tests', () => {
     getDatabase().run("DELETE FROM notifications WHERE hash = 'test-hash-policy'");
     const settingsAdminOnlyWithAdmin = createSettings({ seed_after_download: 'admin_only' });
     // settings has an administrator in its users array by default
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyWithAdmin);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyWithAdmin, mockManager);
     expect(mockManager.pause).not.toHaveBeenCalled();
 
     // Test ADMIN_ONLY policy with no admin user (only manager/reader)
@@ -361,13 +361,13 @@ describe('S3 Integration Tests', () => {
         notification_filter: []
       }
     ];
-    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyNoAdmin);
+    await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyNoAdmin, mockManager);
     expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
   });
 
   test('handleCommand seeding updates settings if admin, fails if reader/manager', async () => {
     const settings = createSettings();
-    settings.exportSettings = mock(() => {});
+    settings.exportSettings = mock(() => {}) as any;
 
     // 1. Admin test
     const adminUser = { role: 'administrator' } as any;
@@ -389,7 +389,7 @@ describe('S3 Integration Tests', () => {
     expect(replyContent).toContain('Seeding policy updated');
 
     // 2. Reader test (should fail)
-    settings.exportSettings.mockClear();
+    (settings.exportSettings as any).mockClear();
     const readerUser = { role: 'reader' } as any;
     const mockInteractionReader: any = {
       commandName: 'seeding',

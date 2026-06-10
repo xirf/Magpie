@@ -9,7 +9,6 @@ import { UserSettings, Settings } from '../../settings';
 import { QBittorrentManager } from '../../client_manager/qbittorrent';
 import { translate, showTorrentList } from './common';
 import { convertSize } from '../../utils';
-import * as si from 'systeminformation';
 
 export async function registerCommands(client: Client, token: string) {
   const rest = new REST({ version: '10' }).setToken(token);
@@ -81,6 +80,10 @@ export async function handleCommand(
     await showTorrentList(interaction, manager, user);
   } else if (commandName === 'stats') {
     await interaction.deferReply();
+
+    // Lazy-load systeminformation only when /stats is called
+    const si = await import('systeminformation');
+
     let cpuTemp = 0;
     try {
       const temp = await si.cpuTemperature();

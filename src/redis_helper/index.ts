@@ -18,10 +18,13 @@ export class RedisEmulator {
     }
 
     if (ex) {
+      // Cap at 1 day — SQLite already deduplicates permanently,
+      // so long-lived timers only waste memory.
+      const cappedEx = Math.min(ex, 86400);
       const timeout = setTimeout(() => {
         this.storage.delete(key);
         this.timeouts.delete(key);
-      }, ex * 1000);
+      }, cappedEx * 1000);
       timeout.unref?.();
       this.timeouts.set(key, timeout);
     }

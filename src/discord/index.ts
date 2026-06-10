@@ -1,6 +1,7 @@
 import {
   Client,
   GatewayIntentBits,
+  Options,
   Partials,
   Interaction,
   Message,
@@ -19,11 +20,22 @@ export function initDiscordBot(settings: Settings, manager: QBittorrentManager):
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
-      GatewayIntentBits.GuildMessages,
       GatewayIntentBits.DirectMessages,
-      GatewayIntentBits.MessageContent
+      GatewayIntentBits.MessageContent,
     ],
-    partials: [Partials.Channel]
+    partials: [Partials.Channel],
+    makeCache: Options.cacheWithLimits({
+      ...Options.DefaultMakeCacheSettings,
+      MessageManager: 0,       // don't cache messages in RAM
+      GuildMemberManager: 200, // keep a small member cache
+      ReactionManager: 0,
+      GuildEmojiManager: 0,
+      GuildStickerManager: 0,
+      GuildInviteManager: 0,
+    }),
+    sweepers: {
+      ...Options.DefaultSweeperSettings,
+    },
   });
 
   client.once('ready', async () => {

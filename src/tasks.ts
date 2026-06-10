@@ -2,12 +2,11 @@ import { Bot } from 'grammy';
 import { BotContext } from './telegram';
 import { RedisWrapper } from './redis_helper';
 import { Settings, UserSettings } from './settings';
-import { ClientRepo } from './client_manager';
+import { ClientRepo, QBittorrentManager } from './client_manager';
 import { escapeMarkdown } from './utils';
 import { t } from './i18n';
 import { watch } from 'fs';
 import { Client as DiscordClient, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { generatePresignedUrl, uploadFolderOrFileToS3 } from './utils/s3';
 import { isNotificationSent, markNotificationSent } from './utils/db';
 
 function userFilters(users: UserSettings[], category: string | null): UserSettings[] {
@@ -23,10 +22,10 @@ export async function torrentFinished(
   bot: Bot<BotContext> | null,
   discordClient: DiscordClient | null,
   redis: RedisWrapper,
-  settings: Settings
+  settings: Settings,
+  manager: QBittorrentManager
 ): Promise<void> {
   try {
-    const manager = ClientRepo.getClientManager(settings);
     const completedTorrents = await manager.get_torrents(null, 'completed');
 
     for (const torrent of completedTorrents) {
@@ -37,6 +36,8 @@ export async function torrentFinished(
 
         if (settings.s3.enabled) {
           try {
+            // Lazy-load AWS SDK — only needed when S3 is active
+            const { uploadFolderOrFileToS3, generatePresignedUrl } = await import('./utils/s3');
             console.log(`[S3] Processing completed torrent: ${torrent.name}`);
             const contentPath = torrent.content_path;
             if (!contentPath) {

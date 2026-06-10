@@ -52,9 +52,12 @@ async function main() {
     console.log("Discord bot is disabled or not configured.");
   }
 
+  // Shared manager instance reused across all poll cycles (avoids re-login overhead)
+  const sharedManager = ClientRepo.getClientManager(settings);
+
   // Schedule periodic completed torrent checks (every 60 seconds)
   const torrentCheckInterval = setInterval(() => {
-    torrentFinished(telegramBot, discordBot, redis, settings).catch(err => {
+    torrentFinished(telegramBot, discordBot, redis, settings, sharedManager).catch(err => {
       console.error("Error running periodic torrentFinished check:", err);
     });
   }, 60000);
