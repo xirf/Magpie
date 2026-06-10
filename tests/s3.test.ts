@@ -386,7 +386,7 @@ describe('S3 Integration Tests', () => {
     await handleCommand(mockInteractionAdmin, mockManager, adminUser, settings);
     expect(settings.seed_after_download).toBe('never');
     expect(settings.exportSettings).toHaveBeenCalled();
-    expect(replyContent).toContain('updated successfully');
+    expect(replyContent).toContain('Seeding policy updated');
 
     // 2. Reader test (should fail)
     settings.exportSettings.mockClear();

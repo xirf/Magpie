@@ -34,7 +34,7 @@ export async function registerCommands(client: Client, token: string) {
           name: 'policy',
           description: 'Seeding policy: always, never, or admin_only',
           type: 3, // String type
-          required: true,
+          required: false,
           choices: [
             { name: 'Always', value: 'always' },
             { name: 'Never', value: 'never' },
@@ -47,19 +47,20 @@ export async function registerCommands(client: Client, token: string) {
 
   try {
     console.log('Registering Discord slash commands...');
-    // Register globally (propagation can take up to an hour)
+
+    // Clear global commands to avoid duplicates (global + guild = two sets of commands)
     await rest.put(
       Routes.applicationCommands(client.user!.id),
-      { body: commandsData }
+      { body: [] }
     );
 
-    // Clear guild-specific commands to avoid duplicates (since global is active)
+    // Only register guild-specific commands for instant updates
     const guilds = await client.guilds.fetch();
     for (const [guildId, guild] of guilds) {
-      console.log(`Clearing guild-specific commands for guild: ${guild.name} (${guildId}) to prevent duplicates`);
+      console.log(`Registering guild commands for: ${guild.name} (${guildId})`);
       await rest.put(
         Routes.applicationGuildCommands(client.user!.id, guildId),
-        { body: [] }
+        { body: commandsData }
       );
     }
     console.log('Discord slash commands registered successfully.');
@@ -115,6 +116,13 @@ export async function handleCommand(
       }
     } catch {}
 
+    const seedPolicy = settings.seed_after_download || 'always';
+    const seedPolicyLabels: Record<string, string> = {
+      always: '🌱 Always',
+      never: '🚫 Never',
+      admin_only: '👑 Admin Only'
+    };
+
     const statsText = translate(user,
       "**============SYSTEM============**\n**CPU Usage:** {cpu_usage}%\n" +
       "**CPU Temp:** {cpu_temp}°C\n**Free Memory:** {free_memory} of {total_memory} ({memory_percent}%)\n" +
@@ -134,9 +142,13 @@ export async function handleCommand(
     const embed = new EmbedBuilder()
       .setTitle(translate(user, 'System Statistics'))
       .setColor(0x00ae86)
-      .setDescription(statsText);
+      .setDescription(statsText)
+      .addFields(
+        { name: '🌿 Seeding Policy', value: seedPolicyLabels[seedPolicy] ?? seedPolicy, inline: true }
+      );
 
     await interaction.editReply({ embeds: [embed] });
+
   } else if (commandName === 'speedlimit') {
     if (user.role === 'reader') {
       await interaction.reply({ content: translate(user, 'You are not authorized to use this bot'), ephemeral: true });
@@ -151,9 +163,33 @@ export async function handleCommand(
       await interaction.reply({ content: translate(user, 'You are not authorized to use this bot'), ephemeral: true });
       return;
     }
-    const policy = interaction.options.getString('policy', true) as 'always' | 'never' | 'admin_only';
+    const currentPolicy = settings.seed_after_download || 'always';
+    const policyArg = interaction.options.getString('policy');
+    if (!policyArg) {
+      // No argument: just show current status
+      const policyLabels: Record<string, string> = {
+        always: '🌱 Always (seed after every download)',
+        never: '🚫 Never (stop seeding immediately)',
+        admin_only: '👑 Admin Only (seed only when an admin downloads)'
+      };
+      await interaction.reply({
+        content: `**Current seeding policy:** ${policyLabels[currentPolicy] ?? currentPolicy}`,
+        ephemeral: true
+      });
+      return;
+    }
+    const policy = policyArg as 'always' | 'never' | 'admin_only';
+    const prevPolicy = currentPolicy;
     settings.seed_after_download = policy;
     settings.exportSettings();
-    await interaction.reply({ content: `✅ Seeding policy updated successfully to: **${policy}**` });
+    const policyLabels: Record<string, string> = {
+      always: '🌱 Always',
+      never: '🚫 Never',
+      admin_only: '👑 Admin Only'
+    };
+    await interaction.reply({
+      content: `✅ Seeding policy updated:\n**${policyLabels[prevPolicy] ?? prevPolicy}** → **${policyLabels[policy] ?? policy}**`,
+      ephemeral: true
+    });
   }
 }
