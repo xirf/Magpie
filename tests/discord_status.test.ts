@@ -101,10 +101,11 @@ describe('Discord Status Filtering Menu Unit Tests', () => {
       isStringSelectMenu: () => false,
       isButton: () => true,
       customId: 'dc_status:completed',
+      user: { id: '123456789', username: 'User' },
       update: mock(async () => ({}))
     };
 
-    await handleInteraction(mockInteraction, mockManager, mockSettings.users[0]);
+    await handleInteraction(mockInteraction, mockManager, mockSettings);
     
     expect(mockManager.get_torrents).toHaveBeenCalledWith(null, 'completed');
     expect(mockInteraction.update).toHaveBeenCalled();

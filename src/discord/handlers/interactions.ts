@@ -5,7 +5,7 @@ import {
   ButtonStyle,
   ActionRowBuilder
 } from 'discord.js';
-import { UserSettings } from '../../settings';
+import { UserSettings, Settings, UserRole } from '../../settings';
 import { QBittorrentManager } from '../../client_manager/qbittorrent';
 import { showTorrentDetails, showTorrentList } from './common';
 import { join } from 'path';
@@ -14,8 +14,11 @@ import { unlinkSync } from 'fs';
 export async function handleInteraction(
   interaction: StringSelectMenuInteraction | ButtonInteraction,
   manager: QBittorrentManager,
-  user: UserSettings
+  settings: Settings
 ) {
+  const user = settings.users.find(u => u.discord_id === interaction.user.id) ||
+               settings.users.find(u => u.discord_id === null || u.discord_id === undefined) ||
+               { user_id: 0, discord_id: interaction.user.id, role: 'reader', locale: 'en' } as UserSettings;
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId === 'select_torrent') {
       const hash = interaction.values[0];
@@ -28,6 +31,10 @@ export async function handleInteraction(
       await showTorrentList(interaction, manager, user);
     } else if (customId === 'dc_retry') {
       await handleRetry(interaction, manager, user);
+    } else if (customId === 'dc_request_access') {
+      await handleRequestAccess(interaction as ButtonInteraction, settings);
+    } else if (customId.startsWith('dc_auth:')) {
+      await handleAuthInteraction(interaction as ButtonInteraction, settings);
     } else if (customId.startsWith('dc_status:')) {
       const status = customId.split(':')[1];
       await showTorrentList(interaction, manager, user, status);
@@ -207,5 +214,100 @@ async function handleRetry(
         components: [retryRow]
       });
     }
+  }
+}
+
+async function handleRequestAccess(interaction: ButtonInteraction, settings: Settings) {
+  await interaction.update({
+    content: '⏳ Access request sent to administrators. Please wait...',
+    components: []
+  });
+
+  for (const u of settings.users) {
+    if (u.role === 'administrator' && u.discord_id && u.discord_id !== '9876543210123') {
+      try {
+        const adminUser = await interaction.client.users.fetch(u.discord_id);
+        if (adminUser) {
+          const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`dc_auth:approve:administrator:${interaction.user.id}:${interaction.user.username}`)
+              .setLabel('Approve Admin')
+              .setStyle(ButtonStyle.Success),
+            new ButtonBuilder()
+              .setCustomId(`dc_auth:approve:manager:${interaction.user.id}:${interaction.user.username}`)
+              .setLabel('Approve Manager')
+              .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+              .setCustomId(`dc_auth:approve:reader:${interaction.user.id}:${interaction.user.username}`)
+              .setLabel('Approve Reader')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId(`dc_auth:deny:${interaction.user.id}:${interaction.user.username}`)
+              .setLabel('Deny')
+              .setStyle(ButtonStyle.Danger)
+          );
+          await adminUser.send({
+            content: `🔔 User **${interaction.user.username}** (ID: \`${interaction.user.id}\`) is requesting access to the bot.`,
+            components: [row]
+          });
+        }
+      } catch (err) {
+        console.error(`Failed to notify admin ${u.discord_id}:`, err);
+      }
+    }
+  }
+}
+
+async function handleAuthInteraction(interaction: ButtonInteraction, settings: Settings) {
+  const parts = interaction.customId.split(':');
+  const action = parts[1]; // 'approve' or 'deny'
+
+  if (action === 'approve') {
+    const role = parts[2] as UserRole;
+    const targetUserId = parts[3];
+    const username = parts[4] || 'User';
+
+    let user = settings.users.find(u => u.discord_id === targetUserId);
+    if (!user) {
+      user = {
+        user_id: 0,
+        discord_id: targetUserId,
+        role: role,
+        locale: 'en',
+        notify: true,
+        notification_filter: []
+      };
+      settings.users.push(user);
+    } else {
+      user.role = role;
+    }
+    settings.exportSettings();
+
+    await interaction.update({
+      content: `✅ Authorized **${username}** (ID: \`${targetUserId}\`) as **${role}**.`,
+      components: []
+    });
+
+    try {
+      const targetUser = await interaction.client.users.fetch(targetUserId);
+      if (targetUser) {
+        await targetUser.send(`🎉 Your access request has been approved! You now have **${role}** role.`);
+      }
+    } catch {}
+  } else if (action === 'deny') {
+    const targetUserId = parts[2];
+    const username = parts[3] || 'User';
+
+    await interaction.update({
+      content: `❌ Access request for **${username}** (ID: \`${targetUserId}\`) was denied.`,
+      components: []
+    });
+
+    try {
+      const targetUser = await interaction.client.users.fetch(targetUserId);
+      if (targetUser) {
+        await targetUser.send(`❌ Your access request was denied by an administrator.`);
+      }
+    } catch {}
   }
 }

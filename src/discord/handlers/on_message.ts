@@ -22,14 +22,40 @@ export async function handleMessage(
 
   console.log(`[Discord] Processing message from ${message.author.tag} (${message.author.id}): "${message.content}"`);
 
-  const user = settings.users.find(u => u.discord_id === message.author.id) ||
-               settings.users.find(u => u.discord_id === null || u.discord_id === undefined);
+  let user = settings.users.find(u => u.discord_id === message.author.id);
   if (!user) {
-    console.warn(`[Discord] Message author ${message.author.tag} (${message.author.id}) not found in authorized users list.`);
-    if (isDM) {
-      await message.reply(t("You are not authorized to use this bot", 'en'));
+    const defaultUser = settings.users.find(u => u.discord_id === null || u.discord_id === undefined);
+    if (defaultUser) {
+      user = defaultUser;
+    } else {
+      const hasAdmin = settings.users.some(u => u.role === 'administrator' && u.discord_id && u.discord_id !== '9876543210123');
+      if (!hasAdmin) {
+        user = {
+          user_id: 0,
+          discord_id: message.author.id,
+          role: 'administrator',
+          locale: 'en',
+          notify: true,
+          notification_filter: []
+        };
+        settings.users.push(user);
+        settings.exportSettings();
+        await message.reply('👑 You have been automatically authorized as the first **administrator**!');
+      } else {
+        console.warn(`[Discord] Message author ${message.author.tag} (${message.author.id}) not found in authorized users list.`);
+        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId('dc_request_access')
+            .setLabel('Request Access')
+            .setStyle(ButtonStyle.Primary)
+        );
+        await message.reply({
+          content: '❌ You are not authorized to use this bot.',
+          components: [row]
+        });
+        return;
+      }
     }
-    return;
   }
 
   if (user.role === 'reader') {

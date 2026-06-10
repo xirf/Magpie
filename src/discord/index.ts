@@ -3,7 +3,10 @@ import {
   GatewayIntentBits,
   Partials,
   Interaction,
-  Message
+  Message,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } from 'discord.js';
 import { Settings } from '../settings';
 import { QBittorrentManager } from '../client_manager/qbittorrent';
@@ -33,24 +36,61 @@ export function initDiscordBot(settings: Settings, manager: QBittorrentManager):
   client.on('interactionCreate', async (interaction: Interaction) => {
     console.log(`[Discord] Interaction received from ${interaction.user.tag} (${interaction.user.id}): type=${interaction.type}`);
     try {
-      const user = settings.users.find(u => u.discord_id === interaction.user.id) ||
-                   settings.users.find(u => u.discord_id === null || u.discord_id === undefined);
-      if (!user) {
-        console.warn(`[Discord] Unauthorized interaction attempt by ${interaction.user.tag} (${interaction.user.id})`);
-        const content = t("You are not authorized to use this bot", 'en');
-        if (interaction.isRepliable()) {
-          await interaction.reply({ content, ephemeral: true });
+      let user = settings.users.find(u => u.discord_id === interaction.user.id);
+
+      const isRequestAccess = interaction.isButton() && interaction.customId === 'dc_request_access';
+      const isAuthInteraction = interaction.isButton() && interaction.customId.startsWith('dc_auth:');
+
+      if (!user && !isRequestAccess && !isAuthInteraction) {
+        // Check if there is any administrator
+        const hasAdmin = settings.users.some(u => u.role === 'administrator' && u.discord_id && u.discord_id !== '9876543210123');
+        if (!hasAdmin) {
+          user = {
+            user_id: 0,
+            discord_id: interaction.user.id,
+            role: 'administrator',
+            locale: 'en',
+            notify: true,
+            notification_filter: []
+          };
+          settings.users.push(user);
+          settings.exportSettings();
+          if (interaction.isRepliable()) {
+            await interaction.reply({ content: '👑 You have been automatically authorized as the first **administrator**!', ephemeral: true });
+          }
+        } else {
+          console.warn(`[Discord] Unauthorized interaction attempt by ${interaction.user.tag} (${interaction.user.id})`);
+          if (interaction.isRepliable()) {
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+              new ButtonBuilder()
+                .setCustomId('dc_request_access')
+                .setLabel('Request Access')
+                .setStyle(ButtonStyle.Primary)
+            );
+            await interaction.reply({
+              content: '❌ You are not authorized to use this bot.',
+              components: [row],
+              ephemeral: true
+            });
+          }
+          return;
         }
-        return;
       }
+
+      const resolvedUser = user || settings.users.find(u => u.discord_id === null || u.discord_id === undefined) || {
+        user_id: 0,
+        discord_id: interaction.user.id,
+        role: 'reader',
+        locale: 'en'
+      };
 
       if (interaction.isChatInputCommand()) {
         console.log(`[Discord] Executing command: /${interaction.commandName}`);
-        await handleCommand(interaction, manager, user);
+        await handleCommand(interaction, manager, resolvedUser);
       } else if (interaction.isStringSelectMenu() || interaction.isButton()) {
         const customId = (interaction as any).customId;
         console.log(`[Discord] Executing component interaction: ${customId}`);
-        await handleInteraction(interaction, manager, user);
+        await handleInteraction(interaction, manager, settings as any);
       }
     } catch (err) {
       console.error('[Discord] Error handling interaction:', err);

@@ -9,14 +9,9 @@ Magpie is a modular chatbot built on the fast **Bun** runtime that allows you to
 * **Multi-Platform Support**: Run the bot on Telegram, Discord, or both simultaneously.
 * **QBittorrent Control**:
   * List active, completed, or downloading torrents.
-  * Filter torrents in Discord with a **Download Status Filtering Menu** (📁 All, ⏳ Downloading, ✔️ Completed, ⏸️ Paused).
   * Pause (Stop), Resume (Start), and Delete torrents.
   * Dynamically assign categories.
   * Toggle Alternate Speed Limits.
-* **Robust File Uploads**: Send magnet links directly or upload `.torrent` files to start downloading.
-* **Interactive Recovery**: Includes a **Retry Button** on failed Discord additions to retry adding torrents without resending messages.
-* **Onboarding & Safety Checks**: Avoid startup crashes on missing credentials—the bot checks configured tokens and starts only the active platform(s).
-* **High Performance**: Powered by **Bun** for rapid execution and low memory overhead, using native `fetch` client logic.
 
 ---
 

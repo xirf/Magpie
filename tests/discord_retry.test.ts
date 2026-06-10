@@ -124,6 +124,7 @@ describe('Discord Retry Button Unit Tests', () => {
       isStringSelectMenu: () => false,
       isButton: () => true,
       customId: 'dc_retry',
+      user: { id: '123456789', username: 'User' },
       channelId: 'channel_123',
       channel: mockChannel,
       client: {
@@ -147,7 +148,7 @@ describe('Discord Retry Button Unit Tests', () => {
       })
     };
 
-    await handleInteraction(mockInteraction, mockManager, mockSettings.users[0]);
+    await handleInteraction(mockInteraction, mockManager, mockSettings);
 
     expect(mockInteraction.update).toHaveBeenCalled();
     expect(updatedOptions.content).toBe('⏳ Retrying...');
