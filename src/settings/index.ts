@@ -40,6 +40,17 @@ export interface RedisSettings {
   url?: string | null;
 }
 
+export interface S3Settings {
+  enabled: boolean;
+  endpoint?: string | null;
+  access_key?: string | null;
+  secret_key?: string | null;
+  bucket?: string | null;
+  region?: string | null;
+  link_expiry?: number | null;
+  mode?: 'mount' | 'upload' | null;
+}
+
 export interface DiscordSettings {
   enabled: boolean;
   token?: string | null;
@@ -51,6 +62,7 @@ export class Settings {
   discord!: DiscordSettings;
   users!: UserSettings[];
   redis!: RedisSettings;
+  s3!: S3Settings;
 
   constructor(data: any) {
     this.updateFrom(data);
@@ -117,6 +129,17 @@ export class Settings {
     this.redis = {
       url: newSettings.redis?.url || null,
     };
+
+    this.s3 = {
+      enabled: !!newSettings.s3?.enabled,
+      endpoint: newSettings.s3?.endpoint || null,
+      access_key: newSettings.s3?.access_key || null,
+      secret_key: newSettings.s3?.secret_key || null,
+      bucket: newSettings.s3?.bucket || null,
+      region: newSettings.s3?.region || null,
+      link_expiry: newSettings.s3?.link_expiry !== undefined && newSettings.s3?.link_expiry !== null ? Number(newSettings.s3.link_expiry) : 3600,
+      mode: newSettings.s3?.mode || 'mount',
+    };
   }
 
   exportSettings() {
@@ -131,6 +154,7 @@ export class Settings {
       discord: this.discord,
       users: this.users,
       redis: this.redis,
+      s3: this.s3,
     };
     writeFileSync(ymlPath, yaml.stringify(data, { indent: 2 }), 'utf-8');
   }
@@ -225,6 +249,16 @@ export class Settings {
       ],
       redis: {
         url: null
+      },
+      s3: {
+        enabled: false,
+        endpoint: null,
+        access_key: null,
+        secret_key: null,
+        bucket: null,
+        region: null,
+        link_expiry: 3600,
+        mode: 'mount'
       }
     });
   }

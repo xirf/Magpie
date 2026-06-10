@@ -16,6 +16,16 @@ discord:
 redis:
   url: null # Optional Redis connection URL (e.g. redis://localhost:6379/0). Defaults to in-memory emulator.
 
+s3:
+  enabled: false
+  endpoint: null # Optional endpoint URL (e.g. for MinIO, Cloudflare R2, Backblaze B2)
+  access_key: null
+  secret_key: null
+  bucket: null
+  region: null
+  link_expiry: 3600 # Link expiration time in seconds (default: 1 hour)
+  mode: mount # 'mount' (files are already in S3) or 'upload' (upload completed files via S3 API)
+
 users:
   # - user_id: 123456789             # Telegram user ID (optional)
   #   discord_id: 123456789          # Discord User Snowflake ID (optional)

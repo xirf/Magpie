@@ -6,7 +6,8 @@ import { ClientRepo } from './client_manager';
 import { escapeMarkdown } from './utils';
 import { t } from './i18n';
 import { watch } from 'fs';
-import { Client as DiscordClient } from 'discord.js';
+import { Client as DiscordClient, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { generatePresignedUrl, uploadFolderOrFileToS3 } from './utils/s3';
 
 function userFilters(users: UserSettings[], category: string | null): UserSettings[] {
   return users.filter(user => {
@@ -30,15 +31,89 @@ export async function torrentFinished(
     for (const torrent of completedTorrents) {
       const exists = await redis.exists(torrent.hash);
       if (!exists) {
+        let downloadLink = '';
+
+        if (settings.s3.enabled) {
+          try {
+            console.log(`[S3] Processing completed torrent: ${torrent.name}`);
+            const contentPath = torrent.content_path;
+            if (!contentPath) {
+              throw new Error('Torrent content path is missing.');
+            }
+
+            if (settings.s3.mode === 'upload') {
+              console.log(`[S3] Uploading ${contentPath} to bucket...`);
+              await uploadFolderOrFileToS3(settings, contentPath, '');
+              console.log(`[S3] Upload completed successfully for ${torrent.name}`);
+            }
+
+            // Find the key to sign
+            const { statSync, readdirSync } = await import('fs');
+            const { join, basename, relative } = await import('path');
+
+            let s3Key = torrent.name;
+            if (contentPath && statSync(contentPath).isDirectory()) {
+              const getFiles = (dir: string): string[] => {
+                const list = readdirSync(dir);
+                let files: string[] = [];
+                for (const file of list) {
+                  const full = join(dir, file);
+                  if (statSync(full).isDirectory()) {
+                    files = files.concat(getFiles(full));
+                  } else {
+                    files.push(full);
+                  }
+                }
+                return files;
+              };
+              const files = getFiles(contentPath);
+              if (files.length > 0) {
+                let largestFile = files[0];
+                let largestSize = 0;
+                for (const file of files) {
+                  const size = statSync(file).size;
+                  if (size > largestSize) {
+                    largestSize = size;
+                    largestFile = file;
+                  }
+                }
+                const baseParent = join(contentPath, '..');
+                s3Key = relative(baseParent, largestFile).replace(/\\/g, '/');
+              }
+            } else if (contentPath) {
+              s3Key = basename(contentPath);
+            }
+
+            downloadLink = await generatePresignedUrl(settings, s3Key);
+            console.log(`[S3] Generated presigned download link for ${torrent.name}: ${downloadLink}`);
+
+            if (settings.s3.mode === 'upload') {
+              try {
+                await manager.delete_one_data(torrent.hash);
+                console.log(`[S3] Deleted local torrent and data for ${torrent.name}`);
+              } catch (delErr) {
+                console.error(`[S3] Failed to delete local torrent data:`, delErr);
+              }
+            }
+          } catch (s3Err) {
+            console.error(`[S3] Failed to process S3 upload/link for ${torrent.name}:`, s3Err);
+            continue; // Skip notifying/marking done so it can retry later
+          }
+        }
+
         const targetUsers = userFilters(settings.users, torrent.category);
         for (const user of targetUsers) {
           if (user.notify) {
             const userLang = user.locale || 'en';
-            const message = t(
+            let message = t(
               "Torrent {name} has finished downloading!",
               userLang,
               { name: escapeMarkdown(torrent.name) }
             );
+
+            if (downloadLink && !user.discord_id) {
+              message += `\n\n🔗 **[Download Link](${downloadLink})** *(Expires in 1 hour)*`;
+            }
 
             // Notify Telegram
             if (user.user_id && bot) {
@@ -54,7 +129,17 @@ export async function torrentFinished(
               try {
                 const dcUser = await discordClient.users.fetch(user.discord_id);
                 if (dcUser) {
-                  await dcUser.send(message);
+                  if (downloadLink) {
+                    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+                      new ButtonBuilder()
+                        .setLabel('Download')
+                        .setURL(downloadLink)
+                        .setStyle(ButtonStyle.Link)
+                    );
+                    await dcUser.send({ content: message, components: [row] });
+                  } else {
+                    await dcUser.send(message);
+                  }
                 }
               } catch (e) {
                 console.error(`Failed to notify Discord user ${user.discord_id} of finished torrent:`, e);

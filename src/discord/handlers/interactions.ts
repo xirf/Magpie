@@ -10,6 +10,7 @@ import { QBittorrentManager } from '../../client_manager/qbittorrent';
 import { showTorrentDetails, showTorrentList } from './common';
 import { join } from 'path';
 import { unlinkSync } from 'fs';
+import { generatePresignedUrl } from '../../utils/s3';
 
 export async function handleInteraction(
   interaction: StringSelectMenuInteraction | ButtonInteraction,
@@ -22,7 +23,7 @@ export async function handleInteraction(
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId === 'select_torrent') {
       const hash = interaction.values[0];
-      await showTorrentDetails(interaction, hash, manager, user);
+      await showTorrentDetails(interaction, hash, manager, user, settings);
     }
   } else if (interaction.isButton()) {
     const customId = interaction.customId;
@@ -38,6 +39,8 @@ export async function handleInteraction(
     } else if (customId.startsWith('dc_status:')) {
       const status = customId.split(':')[1];
       await showTorrentList(interaction, manager, user, status);
+    } else if (customId.startsWith('dc_get_link:')) {
+      await handleGetLink(interaction as ButtonInteraction, manager, settings);
     } else if (customId.startsWith('dc_pause:')) {
       if (user.role === 'reader') {
         await interaction.reply({ content: 'Unauthorized.', ephemeral: true });
@@ -46,7 +49,7 @@ export async function handleInteraction(
       const hash = customId.split(':')[1];
       await manager.pause(hash);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      await showTorrentDetails(interaction, hash, manager, user);
+      await showTorrentDetails(interaction, hash, manager, user, settings);
     } else if (customId.startsWith('dc_resume:')) {
       if (user.role === 'reader') {
         await interaction.reply({ content: 'Unauthorized.', ephemeral: true });
@@ -55,7 +58,7 @@ export async function handleInteraction(
       const hash = customId.split(':')[1];
       await manager.resume(hash);
       await new Promise(resolve => setTimeout(resolve, 1500));
-      await showTorrentDetails(interaction, hash, manager, user);
+      await showTorrentDetails(interaction, hash, manager, user, settings);
     } else if (customId.startsWith('dc_delete:')) {
       if (user.role !== 'administrator') {
         await interaction.reply({ content: 'Unauthorized. Only administrators can delete torrents.', ephemeral: true });
@@ -104,7 +107,7 @@ export async function handleInteraction(
       });
     } else if (customId.startsWith('dc_detail:')) {
       const hash = customId.split(':')[1];
-      await showTorrentDetails(interaction, hash, manager, user);
+      await showTorrentDetails(interaction, hash, manager, user, settings);
     }
   }
 }
@@ -309,5 +312,81 @@ async function handleAuthInteraction(interaction: ButtonInteraction, settings: S
         await targetUser.send(`❌ Your access request was denied by an administrator.`);
       }
     } catch {}
+  }
+}
+
+async function handleGetLink(
+  interaction: ButtonInteraction,
+  manager: QBittorrentManager,
+  settings: Settings
+) {
+  await interaction.deferReply({ ephemeral: true });
+
+  try {
+    const hash = interaction.customId.split(':')[1];
+    const torrent = await manager.get_torrent(hash);
+    if (!torrent) {
+      throw new Error('Torrent not found.');
+    }
+
+    const contentPath = torrent.content_path;
+    if (!contentPath) {
+      throw new Error('Torrent content path is missing.');
+    }
+
+    const { statSync, readdirSync } = await import('fs');
+    const { join, basename, relative } = await import('path');
+
+    let s3Key = torrent.name;
+    if (statSync(contentPath).isDirectory()) {
+      const getFiles = (dir: string): string[] => {
+        const list = readdirSync(dir);
+        let files: string[] = [];
+        for (const file of list) {
+          const full = join(dir, file);
+          if (statSync(full).isDirectory()) {
+            files = files.concat(getFiles(full));
+          } else {
+            files.push(full);
+          }
+        }
+        return files;
+      };
+      const files = getFiles(contentPath);
+      if (files.length > 0) {
+        let largestFile = files[0];
+        let largestSize = 0;
+        for (const file of files) {
+          const size = statSync(file).size;
+          if (size > largestSize) {
+            largestSize = size;
+            largestFile = file;
+          }
+        }
+        const baseParent = join(contentPath, '..');
+        s3Key = relative(baseParent, largestFile).replace(/\\/g, '/');
+      }
+    } else {
+      s3Key = basename(contentPath);
+    }
+
+    const downloadLink = await generatePresignedUrl(settings, s3Key);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel('Download')
+        .setURL(downloadLink)
+        .setStyle(ButtonStyle.Link)
+    );
+
+    await interaction.editReply({
+      content: `🔗 Here is your temporary download link for **${torrent.name}**:\n*(Expires in 1 hour)*`,
+      components: [row]
+    });
+  } catch (err) {
+    console.error('Error generating download link:', err);
+    await interaction.editReply({
+      content: `❌ Failed to generate download link: ${err instanceof Error ? err.message : err}`
+    });
   }
 }

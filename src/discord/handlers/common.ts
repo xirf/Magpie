@@ -5,7 +5,7 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder
 } from 'discord.js';
-import { UserSettings } from '../../settings';
+import { UserSettings, Settings } from '../../settings';
 import { QBittorrentManager } from '../../client_manager/qbittorrent';
 import { t } from '../../i18n';
 import { convertSize, convertEta, formatProgress } from '../../utils';
@@ -113,7 +113,13 @@ export async function showTorrentList(
   }
 }
 
-export async function showTorrentDetails(interactionOrMessage: any, hash: string, manager: QBittorrentManager, user: UserSettings | null) {
+export async function showTorrentDetails(
+  interactionOrMessage: any,
+  hash: string,
+  manager: QBittorrentManager,
+  user: UserSettings | null,
+  settings?: Settings | null
+) {
   try {
     const torrent = await manager.get_torrent(hash);
     if (!torrent) {
@@ -162,7 +168,17 @@ export async function showTorrentDetails(interactionOrMessage: any, hash: string
       .setLabel('Back to List')
       .setStyle(ButtonStyle.Secondary);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(pauseBtn, resumeBtn, deleteBtn, backBtn);
+    const buttons = [pauseBtn, resumeBtn, deleteBtn];
+    if (settings?.s3?.enabled && torrent.progress === 1) {
+      const getLinkBtn = new ButtonBuilder()
+        .setCustomId(`dc_get_link:${torrent.hash}`)
+        .setLabel('Get Link')
+        .setStyle(ButtonStyle.Primary);
+      buttons.push(getLinkBtn);
+    }
+    buttons.push(backBtn);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(buttons);
 
     if (interactionOrMessage.isButton() || interactionOrMessage.isStringSelectMenu()) {
       await interactionOrMessage.update({ embeds: [embed], components: [row], content: '' });

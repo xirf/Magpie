@@ -9,6 +9,8 @@ export interface Torrent {
   size: number;
   eta: number;
   category: string | null;
+  save_path?: string | null;
+  content_path?: string | null;
 }
 
 export class QBittorrentManager {
@@ -296,6 +298,8 @@ export class QBittorrentManager {
       size: t.size,
       eta: t.eta,
       category: t.category || null,
+      save_path: t.save_path || null,
+      content_path: t.content_path || null,
     }));
   }
 
