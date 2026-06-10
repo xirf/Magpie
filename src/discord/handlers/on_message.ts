@@ -12,6 +12,11 @@ export async function handleMessage(
   manager: QBittorrentManager,
   settings: Settings
 ) {
+  // Ignore bot messages to avoid infinite loops
+  if (message.author.bot) {
+    return;
+  }
+
   // Check if DM or the bot is mentioned
   const isDM = message.channel.type === ChannelType.DM;
   const isMentioned = client.user ? message.mentions.has(client.user) : false;

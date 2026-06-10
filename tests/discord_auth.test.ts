@@ -159,4 +159,21 @@ describe('Discord Dynamic Authorization Unit Tests', () => {
     expect(mockTargetUser.send).toHaveBeenCalled();
     expect(targetSentMessage).toContain('approved');
   });
+
+  test('Ignores messages from other bots to prevent loops', async () => {
+    const settings = createSettings();
+    const mockMessage: any = {
+      channel: { type: ChannelType.DM },
+      author: { id: 'other_bot_id', tag: 'Bot#1111', bot: true },
+      content: 'Hello bot',
+      mentions: { has: () => false },
+      attachments: { size: 0 },
+      reply: mock(async () => ({}))
+    };
+
+    await handleMessage(mockMessage, mockClient, mockManager, settings);
+
+    // Should NOT have replied
+    expect(mockMessage.reply).not.toHaveBeenCalled();
+  });
 });
