@@ -1,5 +1,8 @@
 import { describe, expect, test, mock, beforeEach, afterEach } from 'bun:test';
 
+// Set environment variable for test isolation to use in-memory database
+process.env.DATABASE_PATH = ':memory:';
+
 // Mock the S3 module imports before importing the files that use them.
 const mockSend = mock(async (command: any) => ({}));
 const mockGetSignedUrl = mock(async (client: any, command: any, options: any) => {
@@ -35,6 +38,7 @@ import { RedisEmulator } from '../src/redis_helper';
 import { handleInteraction } from '../src/discord/handlers/interactions';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
+import { closeDatabase, getDatabase } from '../src/utils/db';
 
 const mockManager: any = {
   get_torrents: mock(async (hash: string | null, filter: string | null) => []),
@@ -59,6 +63,10 @@ describe('S3 Integration Tests', () => {
     mockManager.delete_one_data.mockClear();
     mockManager.pause.mockClear();
 
+    // Reset DB
+    closeDatabase();
+    getDatabase();
+
     // Create temp files and directories
     if (existsSync(tempDir)) {
       rmSync(tempDir, { recursive: true, force: true });
@@ -70,6 +78,7 @@ describe('S3 Integration Tests', () => {
   });
 
   afterEach(() => {
+    closeDatabase();
     if (existsSync(tempDir)) {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -322,6 +331,7 @@ describe('S3 Integration Tests', () => {
 
     // Test NEVER policy
     await redis.delete('test-hash-policy');
+    getDatabase().run("DELETE FROM notifications WHERE hash = 'test-hash-policy'");
     const settingsNever = createSettings({ seed_after_download: 'never' });
     await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsNever);
     expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
@@ -329,6 +339,7 @@ describe('S3 Integration Tests', () => {
     // Test ADMIN_ONLY policy with admin user
     mockManager.pause.mockClear();
     await redis.delete('test-hash-policy');
+    getDatabase().run("DELETE FROM notifications WHERE hash = 'test-hash-policy'");
     const settingsAdminOnlyWithAdmin = createSettings({ seed_after_download: 'admin_only' });
     // settings has an administrator in its users array by default
     await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyWithAdmin);
@@ -337,6 +348,7 @@ describe('S3 Integration Tests', () => {
     // Test ADMIN_ONLY policy with no admin user (only manager/reader)
     mockManager.pause.mockClear();
     await redis.delete('test-hash-policy');
+    getDatabase().run("DELETE FROM notifications WHERE hash = 'test-hash-policy'");
     const settingsAdminOnlyNoAdmin = createSettings({ seed_after_download: 'admin_only' });
     settingsAdminOnlyNoAdmin.users = [
       {

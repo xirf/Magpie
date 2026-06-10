@@ -118,7 +118,7 @@ export class Settings {
     if (rawUsers && !Array.isArray(rawUsers)) {
       rawUsers = [rawUsers];
     }
-    this.users = (rawUsers ?? []).map((u: any) => ({
+    const yamlUsers = (rawUsers ?? []).map((u: any) => ({
       user_id: u.user_id !== undefined && u.user_id !== null ? Number(u.user_id) : 0,
       discord_id: u.discord_id !== undefined && u.discord_id !== null ? String(u.discord_id) : null,
       role: u.role ?? 'reader',
@@ -126,6 +126,14 @@ export class Settings {
       notify: u.notify !== false,
       notification_filter: Array.isArray(u.notification_filter) ? u.notification_filter : [],
     }));
+
+    try {
+      const { syncUsers } = require('../utils/db');
+      this.users = syncUsers(yamlUsers);
+    } catch (e) {
+      console.error("Failed to sync users with SQLite database, falling back to config users:", e);
+      this.users = yamlUsers;
+    }
 
     this.redis = {
       url: newSettings.redis?.url || null,

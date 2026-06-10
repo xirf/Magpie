@@ -284,6 +284,20 @@ async function handleAuthInteraction(interaction: ButtonInteraction, settings: S
     } else {
       user.role = role;
     }
+
+    try {
+      const { saveUserToDB } = require('../../utils/db');
+      saveUserToDB({
+        user_id: user.user_id ? Number(user.user_id) : 0,
+        discord_id: user.discord_id || null,
+        role: user.role,
+        locale: user.locale || null,
+        notify: user.notify !== false,
+        notification_filter: user.notification_filter || []
+      });
+    } catch (e) {
+      console.error("Failed to save user to SQLite DB:", e);
+    }
     settings.exportSettings();
 
     await interaction.update({

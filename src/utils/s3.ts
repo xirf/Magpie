@@ -3,6 +3,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Settings } from '../settings';
 import { readdirSync, statSync, existsSync } from 'fs';
 import { join, relative, basename } from 'path';
+import { getCachedPresignedUrl, cachePresignedUrl } from './db';
 
 let s3ClientInstance: S3Client | null = null;
 
@@ -32,6 +33,9 @@ export function getS3Client(settings: Settings): S3Client {
 }
 
 export async function generatePresignedUrl(settings: Settings, key: string): Promise<string> {
+  const cachedUrl = getCachedPresignedUrl(key);
+  if (cachedUrl) return cachedUrl;
+
   const client = getS3Client(settings);
   const command = new GetObjectCommand({
     Bucket: settings.s3.bucket || '',
@@ -39,7 +43,10 @@ export async function generatePresignedUrl(settings: Settings, key: string): Pro
   });
 
   const expiry = settings.s3.link_expiry || 3600;
-  return await getSignedUrl(client, command, { expiresIn: expiry });
+  const url = await getSignedUrl(client, command, { expiresIn: expiry });
+
+  cachePresignedUrl(key, url, expiry);
+  return url;
 }
 
 export async function uploadToS3(settings: Settings, localPath: string, key: string): Promise<void> {

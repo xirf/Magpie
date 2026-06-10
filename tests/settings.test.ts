@@ -1,7 +1,20 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { Settings } from '../src/settings';
 
+// Set environment variable for test isolation to use in-memory database
+process.env.DATABASE_PATH = ':memory:';
+
+import { closeDatabase, getDatabase } from '../src/utils/db';
+
 describe('Settings', () => {
+  beforeEach(() => {
+    closeDatabase();
+    getDatabase();
+  });
+
+  afterEach(() => {
+    closeDatabase();
+  });
   test('getDefaultSettings returns correct structure', () => {
     const s = Settings.getDefaultSettings();
     expect(s.client.type).toBe('qbittorrent');
@@ -19,6 +32,7 @@ describe('Settings', () => {
 
   test('updateFrom validates and updates fields', () => {
     const s = Settings.getDefaultSettings();
+    getDatabase().run("DELETE FROM users");
     s.updateFrom({
       client: {
         type: 'qbittorrent',
@@ -149,6 +163,7 @@ describe('Settings', () => {
 
   test('updateFrom handles single object for users instead of array', () => {
     const s = Settings.getDefaultSettings();
+    getDatabase().run("DELETE FROM users");
     s.updateFrom({
       users: {
         user_id: 99999,

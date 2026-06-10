@@ -8,6 +8,7 @@ import { t } from './i18n';
 import { watch } from 'fs';
 import { Client as DiscordClient, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { generatePresignedUrl, uploadFolderOrFileToS3 } from './utils/s3';
+import { isNotificationSent, markNotificationSent } from './utils/db';
 
 function userFilters(users: UserSettings[], category: string | null): UserSettings[] {
   return users.filter(user => {
@@ -30,7 +31,8 @@ export async function torrentFinished(
 
     for (const torrent of completedTorrents) {
       const exists = await redis.exists(torrent.hash);
-      if (!exists) {
+      const existsInSqlite = isNotificationSent(torrent.hash);
+      if (!exists && !existsInSqlite) {
         let downloadLink = '';
 
         if (settings.s3.enabled) {
@@ -172,6 +174,7 @@ export async function torrentFinished(
 
         // Save to redis for 10 days (10 * 86400 seconds)
         await redis.set(torrent.hash, 'true', 10 * 86400);
+        markNotificationSent(torrent.hash);
       }
     }
   } catch (e) {
