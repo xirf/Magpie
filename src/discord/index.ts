@@ -86,7 +86,7 @@ export function initDiscordBot(settings: Settings, manager: QBittorrentManager):
 
       if (interaction.isChatInputCommand()) {
         console.log(`[Discord] Executing command: /${interaction.commandName}`);
-        await handleCommand(interaction, manager, resolvedUser);
+        await handleCommand(interaction, manager, resolvedUser, settings);
       } else if (interaction.isStringSelectMenu() || interaction.isButton()) {
         const customId = (interaction as any).customId;
         console.log(`[Discord] Executing component interaction: ${customId}`);

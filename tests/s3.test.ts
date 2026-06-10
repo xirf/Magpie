@@ -36,6 +36,7 @@ import { generatePresignedUrl, uploadFolderOrFileToS3, getS3Client } from '../sr
 import { torrentFinished } from '../src/tasks';
 import { RedisEmulator } from '../src/redis_helper';
 import { handleInteraction } from '../src/discord/handlers/interactions';
+import { handleCommand } from '../src/discord/handlers/commands';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { closeDatabase, getDatabase } from '../src/utils/db';
@@ -362,5 +363,45 @@ describe('S3 Integration Tests', () => {
     ];
     await torrentFinished(mockTelegramBot, mockDiscordClient, redis, settingsAdminOnlyNoAdmin);
     expect(mockManager.pause).toHaveBeenCalledWith('test-hash-policy');
+  });
+
+  test('handleCommand seeding updates settings if admin, fails if reader/manager', async () => {
+    const settings = createSettings();
+    settings.exportSettings = mock(() => {});
+
+    // 1. Admin test
+    const adminUser = { role: 'administrator' } as any;
+    let replyContent = '';
+    const mockInteractionAdmin: any = {
+      commandName: 'seeding',
+      options: {
+        getString: mock((name: string) => 'never')
+      },
+      reply: mock(async (opts: any) => {
+        replyContent = opts.content || opts;
+        return {};
+      })
+    };
+
+    await handleCommand(mockInteractionAdmin, mockManager, adminUser, settings);
+    expect(settings.seed_after_download).toBe('never');
+    expect(settings.exportSettings).toHaveBeenCalled();
+    expect(replyContent).toContain('updated successfully');
+
+    // 2. Reader test (should fail)
+    settings.exportSettings.mockClear();
+    const readerUser = { role: 'reader' } as any;
+    const mockInteractionReader: any = {
+      commandName: 'seeding',
+      options: {
+        getString: mock(() => 'always')
+      },
+      reply: mock(async () => ({}))
+    };
+
+    await handleCommand(mockInteractionReader, mockManager, readerUser, settings);
+    expect(mockInteractionReader.reply).toHaveBeenCalled();
+    expect(mockInteractionReader.reply.mock.calls[0][0].content).toContain('not authorized');
+    expect(settings.exportSettings).not.toHaveBeenCalled();
   });
 });

@@ -5,7 +5,7 @@ import {
   EmbedBuilder,
   Client
 } from 'discord.js';
-import { UserSettings } from '../../settings';
+import { UserSettings, Settings } from '../../settings';
 import { QBittorrentManager } from '../../client_manager/qbittorrent';
 import { translate, showTorrentList } from './common';
 import { convertSize } from '../../utils';
@@ -25,6 +25,23 @@ export async function registerCommands(client: Client, token: string) {
     {
       name: 'speedlimit',
       description: 'Toggle alternate speed limits mode',
+    },
+    {
+      name: 'seeding',
+      description: 'Set seeding policy after download completes (Admin only)',
+      options: [
+        {
+          name: 'policy',
+          description: 'Seeding policy: always, never, or admin_only',
+          type: 3, // String type
+          required: true,
+          choices: [
+            { name: 'Always', value: 'always' },
+            { name: 'Never', value: 'never' },
+            { name: 'Admin Only', value: 'admin_only' }
+          ]
+        }
+      ]
     },
   ];
 
@@ -54,7 +71,8 @@ export async function registerCommands(client: Client, token: string) {
 export async function handleCommand(
   interaction: ChatInputCommandInteraction,
   manager: QBittorrentManager,
-  user: UserSettings
+  user: UserSettings,
+  settings: Settings
 ) {
   const { commandName } = interaction;
 
@@ -128,5 +146,14 @@ export async function handleCommand(
     const active = await manager.toggle_speed_limit();
     const modeStr = active ? 'ON' : 'OFF';
     await interaction.editReply({ content: `Alternate speed limits toggled: **${modeStr}**` });
+  } else if (commandName === 'seeding') {
+    if (user.role !== 'administrator') {
+      await interaction.reply({ content: translate(user, 'You are not authorized to use this bot'), ephemeral: true });
+      return;
+    }
+    const policy = interaction.options.getString('policy', true) as 'always' | 'never' | 'admin_only';
+    settings.seed_after_download = policy;
+    settings.exportSettings();
+    await interaction.reply({ content: `✅ Seeding policy updated successfully to: **${policy}**` });
   }
 }
