@@ -18,13 +18,20 @@ redis:
 
 s3:
   enabled: false
-  endpoint: null # Optional endpoint URL (e.g. for MinIO, Cloudflare R2, Backblaze B2)
+  endpoint: null # Optional upload endpoint URL (e.g. for MinIO, Cloudflare R2, Backblaze B2)
+  public_url: null # Optional public download endpoint URL (e.g. if routed through Cloudflare, defaults to endpoint)
   access_key: null
   secret_key: null
   bucket: null
   region: null
   link_expiry: 3600 # Link expiration time in seconds (default: 1 hour)
   mode: mount # 'mount' (files are already in S3) or 'upload' (upload completed files via S3 API)
+
+local_server:
+  enabled: false
+  base_url: http://localhost/ # Base URL pointing to local server directory serving downloaded torrent files (e.g. reverse proxy URL)
+  bind_addr: 127.0.0.1:3000   # Address and port for the embedded web server to bind to
+  link_expiry: 3600           # Expiry time for generated local download links in seconds (default: 1 hour)
 
 # Seeding policy after download completes.
 # Options:

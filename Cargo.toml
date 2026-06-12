@@ -1,0 +1,26 @@
+[package]
+name = "magpie"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.38", features = ["full"] }
+serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
+teloxide = { version = "0.12", default-features = false, features = ["macros", "rustls", "ctrlc_handler"] }
+redis = { version = "0.25", features = ["tokio-comp"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+sysinfo = "0.30"
+rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
+notify = "6.1"
+futures = "0.3"
+base64 = "0.22"
+async-trait = "0.1"
+axum = "0.7"
+zip = "0.6"
+rand = "0.8"
+bytes = "1.4"
+

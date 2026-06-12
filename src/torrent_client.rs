@@ -1,0 +1,59 @@
+use std::sync::Arc;
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use crate::config::Settings;
+use crate::qbittorrent::QBittorrentManager;
+use crate::transmission::TransmissionManager;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Torrent {
+    pub hash: String,
+    pub name: String,
+    pub progress: f64,
+    pub dlspeed: u64,
+    pub state: String,
+    pub size: u64,
+    pub eta: i64,
+    pub category: Option<String>,
+    pub save_path: Option<String>,
+    pub content_path: Option<String>,
+    pub num_seeds: Option<i64>,
+    pub num_peers: Option<i64>,
+}
+
+#[async_trait]
+pub trait TorrentClient: Send + Sync {
+    async fn add_magnet(&self, magnet_link: &str, category: Option<&str>) -> Result<bool, String>;
+    async fn add_torrent(&self, file_bytes: Vec<u8>, filename: &str, category: Option<&str>) -> Result<bool, String>;
+    async fn resume_all(&self) -> Result<(), String>;
+    async fn pause_all(&self) -> Result<(), String>;
+    async fn resume(&self, hash: &str) -> Result<(), String>;
+    async fn pause(&self, hash: &str) -> Result<(), String>;
+    async fn delete_one_no_data(&self, hash: &str) -> Result<(), String>;
+    async fn delete_one_data(&self, hash: &str) -> Result<(), String>;
+    async fn delete_all_no_data(&self) -> Result<(), String>;
+    async fn delete_all_data(&self) -> Result<(), String>;
+    async fn get_categories(&self) -> Result<Option<Vec<String>>, String>;
+    async fn set_torrents_category(&self, category: &str, hashes: &str) -> Result<(), String>;
+    async fn get_torrent(&self, hash: &str, status_filter: Option<&str>) -> Result<Option<Torrent>, String>;
+    async fn get_torrents(&self, hash: Option<&str>, status_filter: Option<&str>) -> Result<Vec<Torrent>, String>;
+    async fn edit_category(&self, name: &str, save_path: &str) -> Result<(), String>;
+    async fn create_category(&self, name: &str, save_path: &str) -> Result<(), String>;
+    async fn remove_category(&self, name: &str) -> Result<(), String>;
+    async fn check_connection(&self) -> Result<String, String>;
+    async fn export_torrent(&self, hash: &str) -> Result<(Vec<u8>, String), String>;
+    async fn get_speed_limit_mode(&self) -> Result<bool, String>;
+    async fn toggle_speed_limit(&self) -> Result<bool, String>;
+}
+
+pub fn create_client(settings: &Settings) -> Arc<dyn TorrentClient> {
+    let host = settings.client.host.clone();
+    let user = settings.client.user.clone();
+    let pass = settings.client.password.clone();
+
+    if settings.client.r#type == "transmission" {
+        Arc::new(TransmissionManager::new(&host, &user, &pass))
+    } else {
+        Arc::new(QBittorrentManager::new(&host, &user, &pass))
+    }
+}
