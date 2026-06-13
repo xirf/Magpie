@@ -10,8 +10,8 @@ use serenity::builder::{CreateMessage, CreateButton, CreateActionRow};
 use crate::config::{Settings, UserSettings};
 use crate::redis_client::RedisWrapper;
 use crate::torrent_client::TorrentClient;
-use crate::db::{is_notification_sent, mark_notification_sent};
-use crate::utils::escape_markdown;
+use crate::db::{is_notification_sent, mark_notification_sent, get_messages_for_torrent};
+use crate::utils::{escape_markdown, convert_size, format_progress};
 use crate::i18n::t;
 
 fn user_filters(users: &[UserSettings], category: Option<&str>) -> Vec<UserSettings> {
@@ -118,7 +118,7 @@ pub async fn torrent_finished(
                     if user.user_id != 0 {
                         if let Some(bot) = tg_bot {
                             if let Ok(sent_msg) = bot.send_message(teloxide::types::ChatId(user.user_id), &message).await {
-                                let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash);
+                                let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash, None);
                             }
                         }
                     }
@@ -136,7 +136,7 @@ pub async fn torrent_finished(
                                         msg = msg.components(vec![row]);
                                     }
                                     if let Ok(sent_msg) = dc_user.dm(dc_http, msg).await {
-                                        let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash);
+                                        let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash, None);
                                     }
                                 }
                             }
@@ -170,6 +170,121 @@ pub async fn torrent_finished(
             redis.set(&torrent.hash, "true", Some(10 * 86400)).await;
             let _ = mark_notification_sent(&torrent.hash);
         }
+    }
+}
+
+/// Checks all downloading torrents and edits their notification messages
+/// in-place whenever they cross a new progress milestone.
+pub async fn torrent_progress_update(
+    tg_bot: Option<&Bot>,
+    discord_http: Option<Arc<serenity::http::Http>>,
+    redis: &RedisWrapper,
+    settings: &Settings,
+    manager: &dyn TorrentClient,
+) {
+    let interval = settings.notifications.progress_report_interval.max(1).min(100);
+    let min_bytes = (settings.notifications.min_size_gb * 1_073_741_824.0) as u64;
+
+    let downloading = match manager.get_torrents(None, Some("downloading")).await {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+
+    for torrent in downloading {
+        // Skip small files
+        if torrent.size < min_bytes {
+            continue;
+        }
+
+        let progress_percent = (torrent.progress * 100.0).floor() as u32;
+        // Current milestone bucket (e.g. 23% with interval=10 -> milestone 20)
+        let milestone = (progress_percent / interval) * interval;
+
+        // Skip 0% or 100% (completion handled by torrent_finished)
+        if milestone == 0 || progress_percent >= 100 {
+            continue;
+        }
+
+        let redis_key = format!("progress_notified:{}", torrent.hash);
+        let last_reported: u32 = redis.get(&redis_key).await
+            .unwrap_or_default()
+            .parse()
+            .unwrap_or(0);
+
+        if milestone <= last_reported {
+            continue; // Already reported this milestone
+        }
+
+        // Build the updated message text
+        let progress_bar = format_progress(torrent.progress, 20);
+        let size_str = convert_size(torrent.size);
+        let speed_str = convert_size(torrent.dlspeed);
+
+        let state_cap = {
+            let mut chars = torrent.state.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(f) => f.to_uppercase().collect::<String>() + chars.as_str(),
+            }
+        };
+
+        // Telegram update
+        if let Some(bot) = tg_bot {
+            if let Ok(entries) = get_messages_for_torrent(&torrent.hash) {
+                for (msg_id_str, chat_id_str) in &entries {
+                    if let (Ok(msg_id_i), Some(chat_id_s)) = (msg_id_str.parse::<i32>(), chat_id_str) {
+                        if let Ok(chat_id_i) = chat_id_s.parse::<i64>() {
+                            let tg_text = format!(
+                                "✅ *{}*\n{}{}\n*State:* `{}` \\| *Size:* `{}` \\| *Speed:* `{}/s`\n*Hash:* `{}`",
+                                escape_markdown(&torrent.name),
+                                escape_markdown(&progress_bar),
+                                progress_percent,
+                                escape_markdown(&state_cap),
+                                escape_markdown(&size_str),
+                                escape_markdown(&speed_str),
+                                escape_markdown(&torrent.hash),
+                            );
+                            let _ = bot.edit_message_text(
+                                teloxide::types::ChatId(chat_id_i),
+                                teloxide::types::MessageId(msg_id_i),
+                                tg_text,
+                            ).parse_mode(teloxide::types::ParseMode::MarkdownV2).await;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Discord update — post a new message to the DM channel (interaction edits expire)
+        if let Some(ref dc_http) = discord_http {
+            if let Ok(entries) = get_messages_for_torrent(&torrent.hash) {
+                for (_, chat_id_str) in &entries {
+                    if let Some(channel_id_s) = chat_id_str {
+                        // channel_id_s may be a Discord channel/DM id prefixed "dc:"
+                        if let Some(raw_id) = channel_id_s.strip_prefix("dc:") {
+                            if let Ok(channel_id) = raw_id.parse::<u64>() {
+                                let dc_text = format!(
+                                    "**{}**\n{}{}\nState: `{}` | Size: `{}` | Speed: `{}/s`\nHash: `{}`",
+                                    torrent.name,
+                                    progress_bar,
+                                    progress_percent,
+                                    state_cap,
+                                    size_str,
+                                    speed_str,
+                                    torrent.hash,
+                                );
+                                use serenity::model::id::ChannelId;
+                                let ch = ChannelId::new(channel_id);
+                                let _ = ch.say(dc_http, dc_text).await;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Record the milestone in Redis (keep for 30 days)
+        redis.set(&redis_key, &milestone.to_string(), Some(30 * 86400)).await;
     }
 }
 

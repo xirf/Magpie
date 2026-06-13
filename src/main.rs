@@ -6,8 +6,8 @@ mod s3;
 mod qbittorrent;
 mod transmission;
 mod torrent_client;
-mod discord_bot;
-mod telegram_bot;
+mod discord;
+mod telegram;
 mod tasks;
 mod utils;
 mod server;
@@ -78,7 +78,7 @@ async fn main() {
     let mut tg_bot = None;
     if is_tg_active {
         println!("Starting Telegram Bot...");
-        let bot = telegram_bot::start_telegram_bot(settings_arc.clone(), redis.clone(), torrent_client.clone()).await;
+        let bot = telegram::start_telegram_bot(settings_arc.clone(), redis.clone(), torrent_client.clone()).await;
         tg_bot = Some(bot);
     } else {
         println!("Telegram bot is disabled or not configured.");
@@ -88,7 +88,7 @@ async fn main() {
     let mut dc_client = None;
     if is_dc_active {
         println!("Starting Discord Bot...");
-        match discord_bot::start_discord_bot(settings_arc.clone(), torrent_client.clone()).await {
+        match discord::start_discord_bot(settings_arc.clone(), torrent_client.clone()).await {
             Ok(client) => {
                 dc_client = Some(client);
             }
@@ -132,7 +132,8 @@ async fn main() {
     let redis_for_check = redis.clone();
     let settings_for_check = settings_arc.clone();
     let client_for_check = torrent_client.clone();
-    
+    let dc_http_for_check = dc_http.clone();
+
     tokio::spawn(async move {
         let mut interval = time::interval(Duration::from_secs(60));
         loop {
@@ -141,10 +142,32 @@ async fn main() {
             let current_settings = settings_for_check.read().await.clone();
             tasks::torrent_finished(
                 tg_bot_for_check.as_ref(),
-                dc_http.clone(),
+                dc_http_for_check.clone(),
                 &redis_for_check,
                 &current_settings,
                 &*client_for_check,
+            ).await;
+        }
+    });
+
+    // Schedule periodic progress update edits (every 1 hour)
+    let tg_bot_for_progress = tg_bot.clone();
+    let redis_for_progress = redis.clone();
+    let settings_for_progress = settings_arc.clone();
+    let client_for_progress = torrent_client.clone();
+    let dc_http_for_progress = dc_http.clone();
+
+    tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            let current_settings = settings_for_progress.read().await.clone();
+            tasks::torrent_progress_update(
+                tg_bot_for_progress.as_ref(),
+                dc_http_for_progress.clone(),
+                &redis_for_progress,
+                &current_settings,
+                &*client_for_progress,
             ).await;
         }
     });

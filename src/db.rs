@@ -57,10 +57,13 @@ pub fn get_connection() -> Result<Connection> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS message_torrents (
             message_id TEXT PRIMARY KEY,
-            torrent_hash TEXT NOT NULL
+            torrent_hash TEXT NOT NULL,
+            chat_id TEXT
         )",
         [],
     )?;
+    // Migrate existing tables: add chat_id if missing
+    let _ = conn.execute("ALTER TABLE message_torrents ADD COLUMN chat_id TEXT", []);
     conn.execute(
         "CREATE TABLE IF NOT EXISTS local_downloads (
             token TEXT PRIMARY KEY,
@@ -220,13 +223,29 @@ pub fn sync_users(yaml_users: &[UserSettings]) -> Result<Vec<UserSettings>> {
     load_users_from_db()
 }
 
-pub fn associate_message_with_torrent(message_id: &str, torrent_hash: &str) -> Result<()> {
+pub fn associate_message_with_torrent(message_id: &str, torrent_hash: &str, chat_id: Option<&str>) -> Result<()> {
     let conn = get_connection()?;
     conn.execute(
-        "INSERT OR REPLACE INTO message_torrents (message_id, torrent_hash) VALUES (?, ?)",
-        params![message_id, torrent_hash],
+        "INSERT OR REPLACE INTO message_torrents (message_id, torrent_hash, chat_id) VALUES (?, ?, ?)",
+        params![message_id, torrent_hash, chat_id],
     )?;
     Ok(())
+}
+
+/// Returns all (message_id, chat_id) pairs associated with a torrent hash.
+pub fn get_messages_for_torrent(torrent_hash: &str) -> Result<Vec<(String, Option<String>)>> {
+    let conn = get_connection()?;
+    let mut stmt = conn.prepare(
+        "SELECT message_id, chat_id FROM message_torrents WHERE torrent_hash = ?"
+    )?;
+    let mut rows = stmt.query(params![torrent_hash])?;
+    let mut results = Vec::new();
+    while let Some(row) = rows.next()? {
+        let msg_id: String = row.get(0)?;
+        let chat_id: Option<String> = row.get(1)?;
+        results.push((msg_id, chat_id));
+    }
+    Ok(results)
 }
 
 pub fn get_torrent_hash_for_message(message_id: &str) -> Result<Option<String>> {

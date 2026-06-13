@@ -1,3 +1,11 @@
+pub fn read_cpu_temp() -> String {
+    std::fs::read_to_string("/sys/class/thermal/thermal_zone0/temp")
+        .ok()
+        .and_then(|s| s.trim().parse::<i64>().ok())
+        .map(|t| format!("{}", t / 1000))
+        .unwrap_or_else(|| "N/A".to_string())
+}
+
 pub fn extract_hash_from_magnet(magnet: &str) -> Option<String> {
     let lower = magnet.to_lowercase();
     if let Some(pos) = lower.find("xt=urn:btih:") {

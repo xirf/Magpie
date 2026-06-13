@@ -150,6 +150,27 @@ fn default_local_server_settings() -> LocalServerSettings {
     }
 }
 
+/// Controls when in-progress download notifications are sent.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NotificationSettings {
+    /// Edit the "added" message every N percent of progress (1–100). Default: 10.
+    #[serde(default = "default_progress_interval")]
+    pub progress_report_interval: u32,
+    /// Minimum torrent size in GB to trigger progress reports. Default: 1.0.
+    #[serde(default = "default_min_size_gb")]
+    pub min_size_gb: f64,
+}
+
+fn default_progress_interval() -> u32 { 10 }
+fn default_min_size_gb() -> f64 { 1.0 }
+
+fn default_notification_settings() -> NotificationSettings {
+    NotificationSettings {
+        progress_report_interval: 10,
+        min_size_gb: 1.0,
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Settings {
     pub client: ClientSettings,
@@ -167,6 +188,8 @@ pub struct Settings {
     pub local_server: LocalServerSettings,
     #[serde(default = "default_seed_after_download")]
     pub seed_after_download: String,
+    #[serde(default = "default_notification_settings")]
+    pub notifications: NotificationSettings,
 }
 
 fn default_seed_after_download() -> String { "always".to_string() }
@@ -216,6 +239,10 @@ impl Settings {
                 link_expiry: 3600,
             },
             seed_after_download: "always".to_string(),
+            notifications: NotificationSettings {
+                progress_report_interval: 10,
+                min_size_gb: 1.0,
+            },
         }
     }
 
