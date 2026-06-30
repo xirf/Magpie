@@ -1,16 +1,16 @@
-pub mod state;
-pub mod menu;
 pub mod callbacks;
+pub mod menu;
 pub mod messages;
+pub mod state;
 
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use teloxide::prelude::*;
 use teloxide::Bot;
+use tokio::sync::RwLock;
 
 use crate::config::Settings;
-use crate::torrent_client::TorrentClient;
 use crate::redis_client::RedisWrapper;
+use crate::torrent_client::TorrentClient;
 
 pub use state::BotState;
 
@@ -36,7 +36,11 @@ pub async fn start_telegram_bot(
     }
 
     let bot = Bot::new(token);
-    let state = BotState { settings, manager, redis };
+    let state = BotState {
+        settings,
+        manager,
+        redis,
+    };
 
     let handler = dptree::entry()
         .branch(Update::filter_callback_query().endpoint(callbacks::handle_callback_query))

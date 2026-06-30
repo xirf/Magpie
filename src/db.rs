@@ -1,9 +1,9 @@
+use crate::config::UserSettings;
 use rusqlite::{params, Connection, Result};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::config::UserSettings;
 
 pub fn get_database_path() -> PathBuf {
     let path = if let Ok(p) = env::var("DATABASE_PATH") {
@@ -102,8 +102,10 @@ pub fn mark_notification_sent(hash: &str) -> Result<()> {
 
 pub fn get_cached_presigned_url(key: &str) -> Option<String> {
     let conn = get_connection().ok()?;
-    let mut stmt = conn.prepare("SELECT url, created_at, expires_in FROM presigned_links WHERE s3_key = ?").ok()?;
-    
+    let mut stmt = conn
+        .prepare("SELECT url, created_at, expires_in FROM presigned_links WHERE s3_key = ?")
+        .ok()?;
+
     struct RowResult {
         url: String,
         created_at: i64,
@@ -117,15 +119,15 @@ pub fn get_cached_presigned_url(key: &str) -> Option<String> {
             created_at: row.get(1).ok()?,
             expires_in: row.get(2).ok()?,
         };
-        
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
-        
+
         let elapsed = now - res.created_at;
         let remaining = res.expires_in - elapsed;
-        
+
         if res.expires_in > 0 {
             let percent_remaining = (remaining as f64 / res.expires_in as f64) * 100.0;
             if percent_remaining > 75.0 {
@@ -155,7 +157,9 @@ pub fn cache_presigned_url(key: &str, url: &str, expires_in: i64) -> Result<()> 
 
 pub fn load_users_from_db() -> Result<Vec<UserSettings>> {
     let conn = get_connection()?;
-    let mut stmt = conn.prepare("SELECT telegram_id, discord_id, role, locale, notify, notification_filter FROM users")?;
+    let mut stmt = conn.prepare(
+        "SELECT telegram_id, discord_id, role, locale, notify, notification_filter FROM users",
+    )?;
     let user_iter = stmt.query_map([], |row| {
         let telegram_id: Option<i64> = row.get(0)?;
         let discord_id: Option<String> = row.get(1)?;
@@ -163,11 +167,11 @@ pub fn load_users_from_db() -> Result<Vec<UserSettings>> {
         let locale: Option<String> = row.get(3)?;
         let notify_int: i32 = row.get(4)?;
         let filter_str: Option<String> = row.get(5)?;
-        
+
         let notification_filter = filter_str
             .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
             .unwrap_or_default();
-        
+
         Ok(UserSettings {
             user_id: telegram_id.unwrap_or(0),
             discord_id,
@@ -177,20 +181,23 @@ pub fn load_users_from_db() -> Result<Vec<UserSettings>> {
             notification_filter,
         })
     })?;
-    
+
     let mut users = Vec::new();
-    for user in user_iter {
-        if let Ok(u) = user {
-            users.push(u);
-        }
+    for u in user_iter.flatten() {
+        users.push(u);
     }
     Ok(users)
 }
 
 pub fn save_user_to_db(user: &UserSettings) -> Result<()> {
     let conn = get_connection()?;
-    let filter_str = serde_json::to_string(&user.notification_filter).unwrap_or_else(|_| "[]".to_string());
-    let t_id = if user.user_id != 0 { Some(user.user_id) } else { None };
+    let filter_str =
+        serde_json::to_string(&user.notification_filter).unwrap_or_else(|_| "[]".to_string());
+    let t_id = if user.user_id != 0 {
+        Some(user.user_id)
+    } else {
+        None
+    };
     conn.execute(
         "INSERT OR REPLACE INTO users (discord_id, telegram_id, role, locale, notify, notification_filter)
          VALUES (?, ?, ?, ?, ?, ?)",
@@ -208,22 +215,26 @@ pub fn save_user_to_db(user: &UserSettings) -> Result<()> {
 
 pub fn sync_users(yaml_users: &[UserSettings]) -> Result<Vec<UserSettings>> {
     let existing_users = load_users_from_db().unwrap_or_default();
-    
+
     for yu in yaml_users {
         let exists = existing_users.iter().any(|eu| {
             (yu.discord_id.is_some() && yu.discord_id == eu.discord_id)
                 || (yu.user_id != 0 && yu.user_id == eu.user_id)
         });
-        
+
         if !exists {
             let _ = save_user_to_db(yu);
         }
     }
-    
+
     load_users_from_db()
 }
 
-pub fn associate_message_with_torrent(message_id: &str, torrent_hash: &str, chat_id: Option<&str>) -> Result<()> {
+pub fn associate_message_with_torrent(
+    message_id: &str,
+    torrent_hash: &str,
+    chat_id: Option<&str>,
+) -> Result<()> {
     let conn = get_connection()?;
     conn.execute(
         "INSERT OR REPLACE INTO message_torrents (message_id, torrent_hash, chat_id) VALUES (?, ?, ?)",
@@ -235,9 +246,8 @@ pub fn associate_message_with_torrent(message_id: &str, torrent_hash: &str, chat
 /// Returns all (message_id, chat_id) pairs associated with a torrent hash.
 pub fn get_messages_for_torrent(torrent_hash: &str) -> Result<Vec<(String, Option<String>)>> {
     let conn = get_connection()?;
-    let mut stmt = conn.prepare(
-        "SELECT message_id, chat_id FROM message_torrents WHERE torrent_hash = ?"
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT message_id, chat_id FROM message_torrents WHERE torrent_hash = ?")?;
     let mut rows = stmt.query(params![torrent_hash])?;
     let mut results = Vec::new();
     while let Some(row) = rows.next()? {
@@ -250,7 +260,8 @@ pub fn get_messages_for_torrent(torrent_hash: &str) -> Result<Vec<(String, Optio
 
 pub fn get_torrent_hash_for_message(message_id: &str) -> Result<Option<String>> {
     let conn = get_connection()?;
-    let mut stmt = conn.prepare("SELECT torrent_hash FROM message_torrents WHERE message_id = ?")?;
+    let mut stmt =
+        conn.prepare("SELECT torrent_hash FROM message_torrents WHERE message_id = ?")?;
     let mut rows = stmt.query(params![message_id])?;
     if let Some(row) = rows.next()? {
         let hash: String = row.get(0)?;
@@ -271,25 +282,27 @@ pub fn cache_local_download(token: &str, path: &str, expires_at: i64) -> Result<
 
 pub fn get_local_download_path(token: &str) -> Option<String> {
     let conn = get_connection().ok()?;
-    let mut stmt = conn.prepare("SELECT path, expires_at FROM local_downloads WHERE token = ?").ok()?;
-    
+    let mut stmt = conn
+        .prepare("SELECT path, expires_at FROM local_downloads WHERE token = ?")
+        .ok()?;
+
     struct LocalDownload {
         path: String,
         expires_at: i64,
     }
-    
+
     let mut rows = stmt.query(params![token]).ok()?;
     if let Some(row) = rows.next().ok().flatten() {
         let res = LocalDownload {
             path: row.get(0).ok()?,
             expires_at: row.get(1).ok()?,
         };
-        
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
-            
+
         if res.expires_at > now {
             return Some(res.path);
         }
@@ -303,7 +316,10 @@ pub fn prune_expired_local_downloads() -> Result<()> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
-    conn.execute("DELETE FROM local_downloads WHERE expires_at <= ?", params![now])?;
+    conn.execute(
+        "DELETE FROM local_downloads WHERE expires_at <= ?",
+        params![now],
+    )?;
     Ok(())
 }
 
@@ -311,7 +327,7 @@ pub fn prune_expired_local_downloads() -> Result<()> {
 mod tests {
     use super::*;
     use std::sync::Mutex;
-    
+
     // We use a Mutex to prevent parallel tests from running concurrently and dirtying env vars
     static TEST_MUTEX: Mutex<()> = Mutex::new(());
 
@@ -353,10 +369,10 @@ mod tests {
         let _lock = TEST_MUTEX.lock().unwrap();
         let name = "presigned";
         setup_test_db(name);
-        
+
         let key = "folder/video.mp4";
         let url = "http://test-url.com/video.mp4";
-        
+
         // Cache with 100 seconds expiry
         cache_presigned_url(key, url, 100).unwrap();
 
@@ -394,12 +410,12 @@ mod tests {
                 locale: Some("en".to_string()),
                 notify: false,
                 notification_filter: vec!["movies".to_string()],
-            }
+            },
         ];
 
         let synced = sync_users(&yaml_users).unwrap();
         assert_eq!(synced.length_matches(2), true); // Or synced.len() == 2
-        
+
         assert_eq!(synced.len(), 2);
 
         let u1 = synced.iter().find(|u| u.user_id == 111).unwrap();
@@ -436,7 +452,8 @@ mod tests {
         let expires_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_secs() as i64 + 100;
+            .as_secs() as i64
+            + 100;
 
         cache_local_download(token, path, expires_at).unwrap();
         assert_eq!(get_local_download_path(token), Some(path.to_string()));
@@ -445,19 +462,22 @@ mod tests {
         let expired_expires_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
-            .as_secs() as i64 - 100;
+            .as_secs() as i64
+            - 100;
         cache_local_download("expired-token", path, expired_expires_at).unwrap();
         assert_eq!(get_local_download_path("expired-token"), None);
 
         // Test prune
         prune_expired_local_downloads().unwrap();
-        
+
         let conn = get_connection().unwrap();
-        let count: i64 = conn.query_row(
-            "SELECT count(*) FROM local_downloads WHERE token = 'expired-token'",
-            [],
-            |r| r.get(0)
-        ).unwrap();
+        let count: i64 = conn
+            .query_row(
+                "SELECT count(*) FROM local_downloads WHERE token = 'expired-token'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert_eq!(count, 0);
 
         cleanup_test_db(name);
@@ -472,4 +492,3 @@ mod tests {
         }
     }
 }
-

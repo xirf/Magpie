@@ -1,7 +1,7 @@
+use redis::{AsyncCommands, Client};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use redis::{AsyncCommands, Client};
 
 #[derive(Clone)]
 struct EmulatorEntry {
@@ -85,17 +85,23 @@ impl RedisWrapper {
                         return;
                     }
                     Err(e) => {
-                        eprintln!("Redis connection failed ({:?}), falling back to in-memory storage", e);
+                        eprintln!(
+                            "Redis connection failed ({:?}), falling back to in-memory storage",
+                            e
+                        );
                     }
                 },
                 Err(e) => {
-                    eprintln!("Redis client open failed ({:?}), falling back to in-memory storage", e);
+                    eprintln!(
+                        "Redis client open failed ({:?}), falling back to in-memory storage",
+                        e
+                    );
                 }
             }
         } else {
             println!("Redis URL not configured. Using in-memory storage");
         }
-        
+
         *self.backend.lock().unwrap() = Some(RedisBackend::Emulator(RedisEmulator::new()));
     }
 
@@ -175,9 +181,7 @@ impl RedisWrapper {
                     let res: Option<i32> = conn.exists(key).await.ok();
                     res.unwrap_or(0) > 0
                 }
-                Err(emu) => {
-                    emu.exists(key)
-                }
+                Err(emu) => emu.exists(key),
             }
         } else {
             false
@@ -234,4 +238,3 @@ mod tests {
         assert_eq!(emu.get("mykey"), Some("val2".to_string()));
     }
 }
-

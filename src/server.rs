@@ -1,15 +1,15 @@
-use std::sync::Arc;
-use std::path::Path;
-use tokio::sync::RwLock;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use axum::{
-    Router,
-    routing::get,
-    extract::{Path as AxumPath, Query, State, Request},
-    response::{Response, IntoResponse, Html},
-    http::{StatusCode, header},
     body::Body,
+    extract::{Path as AxumPath, Query, Request, State},
+    http::{header, StatusCode},
+    response::{Html, IntoResponse, Response},
+    routing::get,
+    Router,
 };
+use std::path::Path;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio::sync::RwLock;
 use zip::write::FileOptions;
 use zip::ZipWriter;
 
@@ -26,7 +26,7 @@ struct ChannelStream {
 
 impl futures::Stream for ChannelStream {
     type Item = Result<bytes::Bytes, std::io::Error>;
-    
+
     fn poll_next(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -38,7 +38,10 @@ impl futures::Stream for ChannelStream {
 pub async fn start_server(settings: Arc<RwLock<crate::config::Settings>>) {
     let bind_addr = {
         let s = settings.read().await;
-        s.local_server.bind_addr.clone().unwrap_or_else(|| "0.0.0.0:3000".to_string())
+        s.local_server
+            .bind_addr
+            .clone()
+            .unwrap_or_else(|| "0.0.0.0:3000".to_string())
     };
 
     println!("[Server] Starting embedded web server on {}...", bind_addr);
@@ -101,7 +104,10 @@ async fn handle_download(
         }
     };
 
-    println!("[Server] Request for token: {}, subpath: {}", token, subpath);
+    println!(
+        "[Server] Request for token: {}, subpath: {}",
+        token, subpath
+    );
 
     // Directory traversal security check
     let canonical_base = match base_path.canonicalize() {
@@ -110,8 +116,14 @@ async fn handle_download(
             p
         }
         Err(e) => {
-            eprintln!("[Server] Failed to canonicalize base_path {:?}: {:?}", base_path, e);
-            return render_error("Not Found", "The requested download directory was not found on the server.");
+            eprintln!(
+                "[Server] Failed to canonicalize base_path {:?}: {:?}",
+                base_path, e
+            );
+            return render_error(
+                "Not Found",
+                "The requested download directory was not found on the server.",
+            );
         }
     };
     let canonical_target = match target_path.canonicalize() {
@@ -120,16 +132,29 @@ async fn handle_download(
             p
         }
         Err(e) => {
-            eprintln!("[Server] Failed to canonicalize target_path {:?}: {:?}", target_path, e);
-            return render_error("Not Found", "The requested file or directory does not exist.");
+            eprintln!(
+                "[Server] Failed to canonicalize target_path {:?}: {:?}",
+                target_path, e
+            );
+            return render_error(
+                "Not Found",
+                "The requested file or directory does not exist.",
+            );
         }
     };
     if !canonical_target.starts_with(&canonical_base) {
-        return (StatusCode::FORBIDDEN, "Access Denied: Path Traversal Detected").into_response();
+        return (
+            StatusCode::FORBIDDEN,
+            "Access Denied: Path Traversal Detected",
+        )
+            .into_response();
     }
 
     if canonical_target.is_dir() {
-        let zip_requested = query.get("zip").map(|v| v == "true" || v == "1").unwrap_or(false);
+        let zip_requested = query
+            .get("zip")
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false);
         if zip_requested {
             // Try to acquire the zipping permit to limit concurrent CPU/IO heavy tasks on the STB
             let permit = match state.zip_semaphore.clone().try_acquire_owned() {
@@ -141,22 +166,31 @@ async fn handle_download(
                     ).into_response();
                 }
             };
-            return serve_zipped_directory(&canonical_target, permit).await.into_response();
+            return serve_zipped_directory(&canonical_target, permit)
+                .await
+                .into_response();
         } else {
-            return serve_directory_index(token, subpath, &canonical_base, &canonical_target).await.into_response();
+            return serve_directory_index(token, subpath, &canonical_base, &canonical_target)
+                .await
+                .into_response();
         }
     } else if canonical_target.is_file() {
-        return serve_file(&canonical_target, request.headers()).await.into_response();
+        return serve_file(&canonical_target, request.headers())
+            .await
+            .into_response();
     }
 
     render_error("Not Found", "The requested object type is not supported.")
 }
 
-async fn serve_zipped_directory(dir_path: &Path, permit: tokio::sync::OwnedSemaphorePermit) -> Response {
+async fn serve_zipped_directory(
+    dir_path: &Path,
+    permit: tokio::sync::OwnedSemaphorePermit,
+) -> Response {
     let temp_dir = std::env::temp_dir();
     let unique_id: u64 = rand::random();
     let temp_file_path = temp_dir.join(format!("magpie_zip_{}.tmp", unique_id));
-    
+
     let dir_path_clone = dir_path.to_path_buf();
     let temp_file_path_clone = temp_file_path.clone();
 
@@ -164,19 +198,24 @@ async fn serve_zipped_directory(dir_path: &Path, permit: tokio::sync::OwnedSemap
     let zip_res = tokio::task::spawn_blocking(move || {
         let _permit = permit; // Hold permit during CPU-bound zipping
         zip_directory_to_file(&dir_path_clone, &temp_file_path_clone)
-    }).await;
+    })
+    .await;
 
     match zip_res {
-        Ok(Ok(())) => {
-            serve_temp_zip_file(&temp_file_path, dir_path).await
-        }
+        Ok(Ok(())) => serve_temp_zip_file(&temp_file_path, dir_path).await,
         Ok(Err(e)) => {
             let _ = std::fs::remove_file(&temp_file_path);
-            render_error("Zipping Failed", &format!("Unable to zip directory: {:?}", e))
+            render_error(
+                "Zipping Failed",
+                &format!("Unable to zip directory: {:?}", e),
+            )
         }
         Err(e) => {
             let _ = std::fs::remove_file(&temp_file_path);
-            render_error("Zipping Error", &format!("Spawn blocking task failed: {:?}", e))
+            render_error(
+                "Zipping Error",
+                &format!("Spawn blocking task failed: {:?}", e),
+            )
         }
     }
 }
@@ -185,7 +224,7 @@ fn zip_directory_to_file(dir_path: &Path, out_file_path: &Path) -> Result<(), St
     let file = std::fs::File::create(out_file_path)
         .map_err(|e| format!("Failed to create output zip file: {:?}", e))?;
     let mut zip = ZipWriter::new(file);
-    
+
     let options = FileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .unix_permissions(0o755);
@@ -199,8 +238,12 @@ fn zip_directory_to_file(dir_path: &Path, out_file_path: &Path) -> Result<(), St
         for entry in std::fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            let name = path.strip_prefix(base_dir).unwrap().to_string_lossy().replace('\\', "/");
-            
+            let name = path
+                .strip_prefix(base_dir)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+
             if path.is_dir() {
                 zip.add_directory(&name, options)?;
                 walk_zip(&path, base_dir, zip, options)?;
@@ -216,7 +259,7 @@ fn zip_directory_to_file(dir_path: &Path, out_file_path: &Path) -> Result<(), St
     let base_dir = dir_path.parent().unwrap_or(dir_path);
     walk_zip(dir_path, base_dir, &mut zip, options)
         .map_err(|e| format!("Zipping failed: {:?}", e))?;
-        
+
     zip.finish()
         .map_err(|e| format!("Failed to finish zip writer: {:?}", e))?;
     Ok(())
@@ -225,18 +268,28 @@ fn zip_directory_to_file(dir_path: &Path, out_file_path: &Path) -> Result<(), St
 async fn serve_temp_zip_file(file_path: &Path, original_dir: &Path) -> Response {
     let mut file = match tokio::fs::File::open(&file_path).await {
         Ok(f) => f,
-        Err(e) => return render_error("File Access Error", &format!("Unable to open zipped archive: {:?}", e)),
+        Err(e) => {
+            return render_error(
+                "File Access Error",
+                &format!("Unable to open zipped archive: {:?}", e),
+            )
+        }
     };
 
     let metadata = match file.metadata().await {
         Ok(m) => m,
-        Err(e) => return render_error("Metadata Error", &format!("Unable to read zip details: {:?}", e)),
+        Err(e) => {
+            return render_error(
+                "Metadata Error",
+                &format!("Unable to read zip details: {:?}", e),
+            )
+        }
     };
     let file_size = metadata.len();
 
     let (tx, rx) = tokio::sync::mpsc::channel(16);
     let file_path_clone = file_path.to_path_buf();
-    
+
     tokio::spawn(async move {
         let mut buffer = vec![0u8; 65536];
         let mut remaining = file_size;
@@ -260,14 +313,18 @@ async fn serve_temp_zip_file(file_path: &Path, original_dir: &Path) -> Response 
         let _ = tokio::fs::remove_file(&file_path_clone).await;
     });
 
-    let body = Body::from_stream(ChannelStream { receiver: rx, _permit: None });
+    let body = Body::from_stream(ChannelStream {
+        receiver: rx,
+        _permit: None,
+    });
     let mut response = Response::new(body);
     response.headers_mut().insert(
         header::CONTENT_TYPE,
         header::HeaderValue::from_static("application/zip"),
     );
-    
-    let folder_name = original_dir.file_name()
+
+    let folder_name = original_dir
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("archive");
     let content_disposition = format!("attachment; filename=\"{}.zip\"", folder_name);
@@ -275,10 +332,9 @@ async fn serve_temp_zip_file(file_path: &Path, original_dir: &Path) -> Response 
         header::CONTENT_DISPOSITION,
         header::HeaderValue::from_str(&content_disposition).unwrap(),
     );
-    response.headers_mut().insert(
-        header::CONTENT_LENGTH,
-        header::HeaderValue::from(file_size),
-    );
+    response
+        .headers_mut()
+        .insert(header::CONTENT_LENGTH, header::HeaderValue::from(file_size));
 
     response
 }
@@ -290,11 +346,12 @@ async fn serve_directory_index(
     current_dir: &Path,
 ) -> Response {
     let mut files_list = Vec::new();
-    
+
     // Check if we can display a back link
     let is_root = current_dir == base_dir;
     let parent_link = if !is_root {
-        let rel_parent = current_dir.parent()
+        let rel_parent = current_dir
+            .parent()
             .and_then(|p| p.strip_prefix(base_dir).ok())
             .map(|p| p.to_string_lossy().replace('\\', "/"))
             .unwrap_or_default();
@@ -309,14 +366,23 @@ async fn serve_directory_index(
 
     let entries = match std::fs::read_dir(current_dir) {
         Ok(e) => e,
-        Err(err) => return render_error("Read Directory Error", &format!("Failed to read directory: {:?}", err)),
+        Err(err) => {
+            return render_error(
+                "Read Directory Error",
+                &format!("Failed to read directory: {:?}", err),
+            )
+        }
     };
 
     for entry in entries.flatten() {
         let path = entry.path();
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_string();
         let is_dir = path.is_dir();
-        
+
         let size_str = if is_dir {
             "-".to_string()
         } else {
@@ -328,7 +394,12 @@ async fn serve_directory_index(
         let link = if subpath.is_empty() {
             format!("/download/{}/{}", token, name)
         } else {
-            format!("/download/{}/{}/{}", token, subpath.trim_end_matches('/'), name)
+            format!(
+                "/download/{}/{}/{}",
+                token,
+                subpath.trim_end_matches('/'),
+                name
+            )
         };
 
         files_list.push(format!(
@@ -348,22 +419,32 @@ async fn serve_directory_index(
         ));
     }
 
-    let folder_name = current_dir.file_name()
+    let folder_name = current_dir
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("Downloads");
 
     let zip_link = if subpath.is_empty() {
         format!("/download/{}?zip=true", token)
     } else {
-        format!("/download/{}/{}?zip=true", token, subpath.trim_end_matches('/'))
+        format!(
+            "/download/{}/{}?zip=true",
+            token,
+            subpath.trim_end_matches('/')
+        )
     };
 
     // Fetch expiry info
     let conn = crate::db::get_connection().ok();
-    let expires_at = conn.and_then(|c| {
-        let mut stmt = c.prepare("SELECT expires_at FROM local_downloads WHERE token = ?").ok()?;
-        stmt.query_row(rusqlite::params![token], |r| r.get::<_, i64>(0)).ok()
-    }).unwrap_or(0);
+    let expires_at = conn
+        .and_then(|c| {
+            let mut stmt = c
+                .prepare("SELECT expires_at FROM local_downloads WHERE token = ?")
+                .ok()?;
+            stmt.query_row(rusqlite::params![token], |r| r.get::<_, i64>(0))
+                .ok()
+        })
+        .unwrap_or(0);
 
     let html_content = format!(
         r##"<!DOCTYPE html>
@@ -645,7 +726,9 @@ async fn serve_directory_index(
 </body>
 </html>"##,
         folder_name = folder_name,
-        parent_link = parent_link.map(|l| format!(r#"<a href="{}" class="btn btn-secondary">⬅️ Back</a>"#, l)).unwrap_or_default(),
+        parent_link = parent_link
+            .map(|l| format!(r#"<a href="{}" class="btn btn-secondary">⬅️ Back</a>"#, l))
+            .unwrap_or_default(),
         zip_link = zip_link,
         files_list = files_list.join("\n"),
         expires_at = expires_at
@@ -657,12 +740,22 @@ async fn serve_directory_index(
 async fn serve_file(file_path: &Path, headers: &header::HeaderMap) -> Response {
     let mut file = match tokio::fs::File::open(&file_path).await {
         Ok(f) => f,
-        Err(e) => return render_error("File Access Error", &format!("Unable to open file: {:?}", e)),
+        Err(e) => {
+            return render_error(
+                "File Access Error",
+                &format!("Unable to open file: {:?}", e),
+            )
+        }
     };
 
     let metadata = match file.metadata().await {
         Ok(m) => m,
-        Err(e) => return render_error("Metadata Error", &format!("Unable to read file details: {:?}", e)),
+        Err(e) => {
+            return render_error(
+                "Metadata Error",
+                &format!("Unable to read file details: {:?}", e),
+            )
+        }
     };
     let file_size = metadata.len();
 
@@ -678,7 +771,10 @@ async fn serve_file(file_path: &Path, headers: &header::HeaderMap) -> Response {
 
     let content_length = end - start + 1;
     if let Err(e) = file.seek(std::io::SeekFrom::Start(start)).await {
-        return render_error("File Seek Error", &format!("Unable to process file stream: {:?}", e));
+        return render_error(
+            "File Seek Error",
+            &format!("Unable to process file stream: {:?}", e),
+        );
     }
 
     let (tx, rx) = tokio::sync::mpsc::channel(16);
@@ -703,7 +799,10 @@ async fn serve_file(file_path: &Path, headers: &header::HeaderMap) -> Response {
         }
     });
 
-    let body = Body::from_stream(ChannelStream { receiver: rx, _permit: None });
+    let body = Body::from_stream(ChannelStream {
+        receiver: rx,
+        _permit: None,
+    });
     let mut response = Response::new(body);
     *response.status_mut() = status;
 
@@ -725,16 +824,19 @@ async fn serve_file(file_path: &Path, headers: &header::HeaderMap) -> Response {
     );
 
     let mime = guess_mime(file_path);
-    response.headers_mut().insert(
-        header::CONTENT_TYPE,
-        header::HeaderValue::from_static(mime),
-    );
+    response
+        .headers_mut()
+        .insert(header::CONTENT_TYPE, header::HeaderValue::from_static(mime));
 
-    let filename = file_path.file_name()
+    let filename = file_path
+        .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("file");
-    
-    let content_disposition = format!("inline; filename*=UTF-8''{}", crate::utils::percent_encode(filename));
+
+    let content_disposition = format!(
+        "inline; filename*=UTF-8''{}",
+        crate::utils::percent_encode(filename)
+    );
     response.headers_mut().insert(
         header::CONTENT_DISPOSITION,
         header::HeaderValue::from_str(&content_disposition).unwrap(),
@@ -766,7 +868,8 @@ fn parse_range(range_header: &str, file_size: u64) -> Option<(u64, u64)> {
 }
 
 fn guess_mime(path: &Path) -> &'static str {
-    let ext = path.extension()
+    let ext = path
+        .extension()
         .and_then(|s| s.to_str())
         .unwrap_or("")
         .to_lowercase();

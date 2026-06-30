@@ -1,22 +1,22 @@
 use serenity::async_trait;
-use serenity::model::gateway::Ready;
+use serenity::builder::{CreateActionRow, CreateInteractionResponse};
 use serenity::model::application::Interaction;
 use serenity::model::channel::Message;
+use serenity::model::gateway::Ready;
 use serenity::prelude::*;
 use serenity::Client;
-use serenity::builder::{CreateInteractionResponse, CreateActionRow};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub mod state;
-pub mod views;
 pub mod commands;
 pub mod components;
 pub mod messages;
+pub mod state;
+pub mod views;
 
-pub use state::Handler;
 use crate::config::Settings;
 use crate::torrent_client::TorrentClient;
+pub use state::Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -35,7 +35,9 @@ impl EventHandler for Handler {
         let mut user = state::get_resolved_user(&settings, &discord_id);
 
         // Auto auth first administrator
-        let has_admin = settings.users.iter().any(|u| u.role == "administrator" && u.discord_id.as_deref().unwrap_or("") != "9876543210123");
+        let has_admin = settings.users.iter().any(|u| {
+            u.role == "administrator" && u.discord_id.as_deref().unwrap_or("") != "9876543210123"
+        });
         if !has_admin {
             user.role = "administrator".to_string();
             user.discord_id = Some(discord_id.clone());
@@ -63,21 +65,45 @@ impl EventHandler for Handler {
             _ => false,
         };
 
-        if settings.users.iter().all(|u| u.discord_id.as_deref() != Some(&discord_id)) && !is_request_access && !is_auth_interaction {
-            let row = CreateActionRow::Buttons(vec![
-                serenity::builder::CreateButton::new("dc_request_access").label("Request Access").style(serenity::model::application::ButtonStyle::Primary)
-            ]);
+        if settings
+            .users
+            .iter()
+            .all(|u| u.discord_id.as_deref() != Some(&discord_id))
+            && !is_request_access
+            && !is_auth_interaction
+        {
+            let row = CreateActionRow::Buttons(vec![serenity::builder::CreateButton::new(
+                "dc_request_access",
+            )
+            .label("Request Access")
+            .style(serenity::model::application::ButtonStyle::Primary)]);
             let content = "❌ You are not authorized to use this bot.";
             match interaction {
                 Interaction::Command(cmd) => {
-                    let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                        serenity::builder::CreateInteractionResponseMessage::new().content(content).components(vec![row]).ephemeral(true)
-                    )).await;
+                    let _ = cmd
+                        .create_response(
+                            &ctx.http,
+                            CreateInteractionResponse::Message(
+                                serenity::builder::CreateInteractionResponseMessage::new()
+                                    .content(content)
+                                    .components(vec![row])
+                                    .ephemeral(true),
+                            ),
+                        )
+                        .await;
                 }
                 Interaction::Component(comp) => {
-                    let _ = comp.create_response(&ctx.http, CreateInteractionResponse::Message(
-                        serenity::builder::CreateInteractionResponseMessage::new().content(content).components(vec![row]).ephemeral(true)
-                    )).await;
+                    let _ = comp
+                        .create_response(
+                            &ctx.http,
+                            CreateInteractionResponse::Message(
+                                serenity::builder::CreateInteractionResponseMessage::new()
+                                    .content(content)
+                                    .components(vec![row])
+                                    .ephemeral(true),
+                            ),
+                        )
+                        .await;
                 }
                 _ => {}
             }
@@ -100,15 +126,21 @@ impl EventHandler for Handler {
     }
 }
 
-pub async fn start_discord_bot(settings: Arc<RwLock<Settings>>, manager: Arc<dyn TorrentClient>) -> Result<Client, String> {
+pub async fn start_discord_bot(
+    settings: Arc<RwLock<Settings>>,
+    manager: Arc<dyn TorrentClient>,
+) -> Result<Client, String> {
     let token = {
         let s = settings.read().await;
-        s.discord.token.clone().ok_or_else(|| "Discord token not configured".to_string())?
+        s.discord
+            .token
+            .clone()
+            .ok_or_else(|| "Discord token not configured".to_string())?
     };
 
-    let intents = GatewayIntents::GUILDS 
+    let intents = GatewayIntents::GUILDS
         | GatewayIntents::GUILD_MESSAGES
-        | GatewayIntents::DIRECT_MESSAGES 
+        | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
     let handler = Handler { settings, manager };

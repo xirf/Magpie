@@ -1,11 +1,11 @@
+use crate::torrent_client::{Torrent, TorrentClient};
+use async_trait::async_trait;
 use reqwest::header::COOKIE;
 use reqwest::{Client, Response};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use async_trait::async_trait;
-use crate::torrent_client::{Torrent, TorrentClient};
 
 #[derive(Clone)]
 pub struct QBittorrentManager {
@@ -41,7 +41,7 @@ impl QBittorrentManager {
         let val = match self.check_connection().await {
             Ok(version) => {
                 let ver = version.trim().to_lowercase();
-                ver.starts_with('v') && ver.chars().nth(1).map_or(false, |c| c >= '5')
+                ver.starts_with('v') && ver.chars().nth(1).is_some_and(|c| c >= '5')
             }
             Err(_) => false,
         };
@@ -56,7 +56,9 @@ impl QBittorrentManager {
         params.insert("password", &self.pass);
 
         let url = format!("{}/api/v2/auth/login", self.host);
-        let res = self.client.post(&url)
+        let res = self
+            .client
+            .post(&url)
             .form(&params)
             .header("Referer", &self.host)
             .header("Origin", &self.host)
@@ -74,7 +76,9 @@ impl QBittorrentManager {
             if let Ok(cookie_str) = cookie_hdr.to_str() {
                 for part in cookie_str.split(';') {
                     let trim_part = part.trim();
-                    if trim_part.to_lowercase().starts_with("qbt_sid_") || trim_part.to_lowercase().starts_with("sid=") {
+                    if trim_part.to_lowercase().starts_with("qbt_sid_")
+                        || trim_part.to_lowercase().starts_with("sid=")
+                    {
                         sid_val = Some(trim_part.to_string());
                         break;
                     }
@@ -87,7 +91,14 @@ impl QBittorrentManager {
         Ok(())
     }
 
-    async fn request(&self, method: reqwest::Method, path: &str, body: Option<Vec<u8>>, form: Option<HashMap<&str, String>>, mut multipart: Option<reqwest::multipart::Form>) -> Result<Response, String> {
+    async fn request(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        body: Option<Vec<u8>>,
+        form: Option<HashMap<&str, String>>,
+        mut multipart: Option<reqwest::multipart::Form>,
+    ) -> Result<Response, String> {
         let mut retries = 0;
         loop {
             let sid_opt = self.sid.read().await.clone();
@@ -95,12 +106,18 @@ impl QBittorrentManager {
                 Some(s) => s,
                 None => {
                     self.login().await?;
-                    self.sid.read().await.clone().ok_or_else(|| "Failed to login".to_string())?
+                    self.sid
+                        .read()
+                        .await
+                        .clone()
+                        .ok_or_else(|| "Failed to login".to_string())?
                 }
             };
 
             let url = format!("{}{}", self.host, path);
-            let mut req = self.client.request(method.clone(), &url)
+            let mut req = self
+                .client
+                .request(method.clone(), &url)
                 .header(COOKIE, &sid)
                 .header("Referer", &self.host)
                 .header("Origin", &self.host);
@@ -122,7 +139,11 @@ impl QBittorrentManager {
             }
 
             if !res.status().is_success() {
-                return Err(format!("Request failed with status {}: {}", res.status(), res.text().await.unwrap_or_default()));
+                return Err(format!(
+                    "Request failed with status {}: {}",
+                    res.status(),
+                    res.text().await.unwrap_or_default()
+                ));
             }
 
             return Ok(res);
@@ -141,11 +162,24 @@ impl TorrentClient for QBittorrentManager {
             }
         }
 
-        let _ = self.request(reqwest::Method::POST, "/api/v2/torrents/add", None, Some(form), None).await?;
+        let _ = self
+            .request(
+                reqwest::Method::POST,
+                "/api/v2/torrents/add",
+                None,
+                Some(form),
+                None,
+            )
+            .await?;
         Ok(true)
     }
 
-    async fn add_torrent(&self, file_bytes: Vec<u8>, filename: &str, category: Option<&str>) -> Result<bool, String> {
+    async fn add_torrent(
+        &self,
+        file_bytes: Vec<u8>,
+        filename: &str,
+        category: Option<&str>,
+    ) -> Result<bool, String> {
         let part = reqwest::multipart::Part::bytes(file_bytes)
             .file_name(filename.to_string())
             .mime_str("application/x-bittorrent")
@@ -158,35 +192,71 @@ impl TorrentClient for QBittorrentManager {
             }
         }
 
-        let _ = self.request(reqwest::Method::POST, "/api/v2/torrents/add", None, None, Some(form)).await?;
+        let _ = self
+            .request(
+                reqwest::Method::POST,
+                "/api/v2/torrents/add",
+                None,
+                None,
+                Some(form),
+            )
+            .await?;
         Ok(true)
     }
 
     async fn resume_all(&self) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("hashes", "all".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/resume", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/resume",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn pause_all(&self) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("hashes", "all".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/pause", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/pause",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn resume(&self, hash: &str) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("hashes", hash.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/resume", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/resume",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn pause(&self, hash: &str) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("hashes", hash.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/pause", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/pause",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
@@ -194,7 +264,14 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("hashes", hash.to_string());
         form.insert("deleteFiles", "false".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/delete", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/delete",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
@@ -202,7 +279,14 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("hashes", hash.to_string());
         form.insert("deleteFiles", "true".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/delete", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/delete",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
@@ -210,7 +294,14 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("hashes", "all".to_string());
         form.insert("deleteFiles", "false".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/delete", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/delete",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
@@ -218,13 +309,28 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("hashes", "all".to_string());
         form.insert("deleteFiles", "true".to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/delete", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/delete",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn get_categories(&self) -> Result<Option<Vec<String>>, String> {
-        let res = self.request(reqwest::Method::GET, "/api/v2/torrents/categories", None, None, None).await?;
-        
+        let res = self
+            .request(
+                reqwest::Method::GET,
+                "/api/v2/torrents/categories",
+                None,
+                None,
+                None,
+            )
+            .await?;
+
         #[derive(Deserialize)]
         struct CategoryDetail {
             _name: String,
@@ -243,11 +349,22 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("hashes", hashes.to_string());
         form.insert("category", category.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/setCategory", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/setCategory",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
-    async fn get_torrent(&self, hash: &str, status_filter: Option<&str>) -> Result<Option<Torrent>, String> {
+    async fn get_torrent(
+        &self,
+        hash: &str,
+        status_filter: Option<&str>,
+    ) -> Result<Option<Torrent>, String> {
         let torrents = self.get_torrents(Some(hash), status_filter).await?;
         if torrents.is_empty() {
             Ok(None)
@@ -256,7 +373,11 @@ impl TorrentClient for QBittorrentManager {
         }
     }
 
-    async fn get_torrents(&self, hash: Option<&str>, status_filter: Option<&str>) -> Result<Vec<Torrent>, String> {
+    async fn get_torrents(
+        &self,
+        hash: Option<&str>,
+        status_filter: Option<&str>,
+    ) -> Result<Vec<Torrent>, String> {
         let mut query_params = Vec::new();
         if let Some(h) = hash {
             query_params.push(format!("hashes={}", h));
@@ -280,7 +401,9 @@ impl TorrentClient for QBittorrentManager {
         };
 
         let path = format!("/api/v2/torrents/info{}", query);
-        let res = self.request(reqwest::Method::GET, &path, None, None, None).await?;
+        let res = self
+            .request(reqwest::Method::GET, &path, None, None, None)
+            .await?;
 
         #[derive(Deserialize)]
         struct QBTorrent {
@@ -300,27 +423,41 @@ impl TorrentClient for QBittorrentManager {
 
         let data: Vec<QBTorrent> = res.json().await.map_err(|e| e.to_string())?;
 
-        Ok(data.into_iter().map(|t| Torrent {
-            hash: t.hash,
-            name: t.name,
-            progress: t.progress,
-            dlspeed: t.dlspeed,
-            state: t.state,
-            size: t.size,
-            eta: t.eta,
-            category: if t.category.as_deref() == Some("") { None } else { t.category },
-            save_path: t.save_path,
-            content_path: t.content_path,
-            num_seeds: Some(t.num_seeds),
-            num_peers: Some(t.num_leechers),
-        }).collect())
+        Ok(data
+            .into_iter()
+            .map(|t| Torrent {
+                hash: t.hash,
+                name: t.name,
+                progress: t.progress,
+                dlspeed: t.dlspeed,
+                state: t.state,
+                size: t.size,
+                eta: t.eta,
+                category: if t.category.as_deref() == Some("") {
+                    None
+                } else {
+                    t.category
+                },
+                save_path: t.save_path,
+                content_path: t.content_path,
+                num_seeds: Some(t.num_seeds),
+                num_peers: Some(t.num_leechers),
+            })
+            .collect())
     }
 
     async fn edit_category(&self, name: &str, save_path: &str) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("category", name.to_string());
         form.insert("savePath", save_path.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/editCategory", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/editCategory",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
@@ -328,42 +465,83 @@ impl TorrentClient for QBittorrentManager {
         let mut form = HashMap::new();
         form.insert("category", name.to_string());
         form.insert("savePath", save_path.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/createCategory", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/createCategory",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn remove_category(&self, name: &str) -> Result<(), String> {
         let mut form = HashMap::new();
         form.insert("categories", name.to_string());
-        self.request(reqwest::Method::POST, "/api/v2/torrents/removeCategories", None, Some(form), None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/torrents/removeCategories",
+            None,
+            Some(form),
+            None,
+        )
+        .await?;
         Ok(())
     }
 
     async fn check_connection(&self) -> Result<String, String> {
-        let res = self.request(reqwest::Method::GET, "/api/v2/app/version", None, None, None).await?;
+        let res = self
+            .request(
+                reqwest::Method::GET,
+                "/api/v2/app/version",
+                None,
+                None,
+                None,
+            )
+            .await?;
         let version = res.text().await.map_err(|e| e.to_string())?;
         Ok(version)
     }
 
     async fn export_torrent(&self, hash: &str) -> Result<(Vec<u8>, String), String> {
         let torrent_info = self.get_torrent(hash, None).await?;
-        let torrent_name = torrent_info.map(|t| t.name).unwrap_or_else(|| "torrent".to_string());
-        
+        let torrent_name = torrent_info
+            .map(|t| t.name)
+            .unwrap_or_else(|| "torrent".to_string());
+
         let path = format!("/api/v2/torrents/export?hash={}", hash);
-        let res = self.request(reqwest::Method::GET, &path, None, None, None).await?;
+        let res = self
+            .request(reqwest::Method::GET, &path, None, None, None)
+            .await?;
         let bytes = res.bytes().await.map_err(|e| e.to_string())?.to_vec();
-        
+
         Ok((bytes, format!("{}.torrent", torrent_name)))
     }
 
     async fn get_speed_limit_mode(&self) -> Result<bool, String> {
-        let res = self.request(reqwest::Method::GET, "/api/v2/transfer/speedLimitsMode", None, None, None).await?;
+        let res = self
+            .request(
+                reqwest::Method::GET,
+                "/api/v2/transfer/speedLimitsMode",
+                None,
+                None,
+                None,
+            )
+            .await?;
         let txt = res.text().await.map_err(|e| e.to_string())?;
         Ok(txt == "1")
     }
 
     async fn toggle_speed_limit(&self) -> Result<bool, String> {
-        self.request(reqwest::Method::POST, "/api/v2/transfer/toggleSpeedLimitsMode", None, None, None).await?;
+        self.request(
+            reqwest::Method::POST,
+            "/api/v2/transfer/toggleSpeedLimitsMode",
+            None,
+            None,
+            None,
+        )
+        .await?;
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         self.get_speed_limit_mode().await
     }

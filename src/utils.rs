@@ -50,17 +50,23 @@ pub fn extract_clean_magnet(text: &str) -> Option<String> {
         if parts.is_empty() {
             return None;
         }
-        
+
         let mut magnet_link = String::new();
         for (i, part) in parts.iter().enumerate() {
             if i == 0 {
                 magnet_link.push_str(part);
             } else {
                 let is_parameter_start = starts_parameter(part);
-                let is_tracker_url = part.starts_with("http://") || part.starts_with("https://") || part.starts_with("udp://") || part.starts_with("wss://");
-                
+                let is_tracker_url = part.starts_with("http://")
+                    || part.starts_with("https://")
+                    || part.starts_with("udp://")
+                    || part.starts_with("wss://");
+
                 if is_parameter_start || is_tracker_url {
-                    if !part.starts_with('&') && !magnet_link.ends_with('&') && !magnet_link.ends_with('?') {
+                    if !part.starts_with('&')
+                        && !magnet_link.ends_with('&')
+                        && !magnet_link.ends_with('?')
+                    {
                         magnet_link.push('&');
                     }
                     magnet_link.push_str(part);
@@ -74,7 +80,7 @@ pub fn extract_clean_magnet(text: &str) -> Option<String> {
                 }
             }
         }
-        
+
         if magnet_link.to_lowercase().contains("xt=urn:") {
             return Some(magnet_link);
         }
@@ -105,7 +111,12 @@ pub fn convert_eta(seconds: i64) -> String {
 
     let time_str = format!("{:02}:{:02}:{:02}", hours, minutes, secs);
     if days > 0 {
-        format!("{} day{}, {}", days, if days > 1 { "s" } else { "" }, time_str)
+        format!(
+            "{} day{}, {}",
+            days,
+            if days > 1 { "s" } else { "" },
+            time_str
+        )
     } else {
         time_str
     }
@@ -198,25 +209,31 @@ mod tests {
     fn test_extract_clean_magnet() {
         let m1 = "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=test";
         assert_eq!(extract_clean_magnet(m1), Some(m1.to_string()));
-        
+
         let m2 = "magnet:?\nxt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=test";
         assert_eq!(extract_clean_magnet(m2), Some(m1.to_string()));
-        
-        let m3 = "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=test download this";
+
+        let m3 =
+            "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=test download this";
         assert_eq!(extract_clean_magnet(m3), Some("magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=test%20download%20this".to_string()));
-        
+
         let m4 = "magnet:?dn=test";
         assert_eq!(extract_clean_magnet(m4), None);
 
         // Test with raw spaces in display name
         let m5_input = "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=BanG Dream! &tr=http://nyaa.tracker.wf:7777/announce";
         let m5_expected = "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=BanG%20Dream!&tr=http://nyaa.tracker.wf:7777/announce";
-        assert_eq!(extract_clean_magnet(m5_input), Some(m5_expected.to_string()));
+        assert_eq!(
+            extract_clean_magnet(m5_input),
+            Some(m5_expected.to_string())
+        );
 
         // Test with multiline input similar to the user's screenshot
         let m6_input = "magnet:?\nxt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=%5BJMAX%5D%20%5B2026.03.21%5D%20BanG%20Dream%21%20%E3%83%8F%E3%83%BC%E3%83%9F%E3%83%83%E3%83%88%E3%83%BB%E3%83%8D%E3%83%BC%E3%83%A0%E3%83%BB%E3%83%96%E3%83%AB%E3%83%BC%20-%20\n%20%E8%A8%B1%E5%A9%9A%E3%83%BB%E3%83%9D%E3%83%BC%E3%83%88%E3%83%AC%E3%83%BC%E3%83%88%20%28Cover%29%20%5BFLAC%2096kHz%2F24bit%5D&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce";
         let m6_expected = "magnet:?xt=urn:btih:feb1f53aa5b3a1660d853c158710175f90d20074&dn=%5BJMAX%5D%20%5B2026.03.21%5D%20BanG%20Dream%21%20%E3%83%8F%E3%83%BC%E3%83%9F%E3%83%83%E3%83%88%E3%83%BB%E3%83%8D%E3%83%BC%E3%83%A0%E3%83%BB%E3%83%96%E3%83%AB%E3%83%BC%20-%20%20%E8%A8%B1%E5%A9%9A%E3%83%BB%E3%83%9D%E3%83%BC%E3%83%88%E3%83%AC%E3%83%BC%E3%83%88%20%28Cover%29%20%5BFLAC%2096kHz%2F24bit%5D&tr=http%3A%2F%2Fnyaa.tracker.wf%3A7777%2Fannounce&tr=udp%3A%2F%2Fopen.stealth.si%3A80%2Fannounce";
-        assert_eq!(extract_clean_magnet(m6_input), Some(m6_expected.to_string()));
+        assert_eq!(
+            extract_clean_magnet(m6_input),
+            Some(m6_expected.to_string())
+        );
     }
 }
-

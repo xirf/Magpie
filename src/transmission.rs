@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use reqwest::Client;
-use serde::Deserialize;
+use crate::torrent_client::{Torrent, TorrentClient};
 use async_trait::async_trait;
 use base64::Engine;
-use crate::torrent_client::{Torrent, TorrentClient};
+use reqwest::Client;
+use serde::Deserialize;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct TransmissionManager {
@@ -27,14 +27,20 @@ impl TransmissionManager {
         }
     }
 
-    async fn request(&self, method: &str, arguments: serde_json::Value) -> Result<serde_json::Value, String> {
+    async fn request(
+        &self,
+        method: &str,
+        arguments: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let body = serde_json::json!({
             "method": method,
             "arguments": arguments,
         });
 
         for _ in 0..2 {
-            let mut req = self.client.post(&format!("{}/transmission/rpc", self.host))
+            let mut req = self
+                .client
+                .post(format!("{}/transmission/rpc", self.host))
                 .json(&body);
 
             if !self.user.is_empty() {
@@ -56,7 +62,9 @@ impl TransmissionManager {
                         continue;
                     }
                 }
-                return Err("Failed to get X-Transmission-Session-Id header from 409 response".to_string());
+                return Err(
+                    "Failed to get X-Transmission-Session-Id header from 409 response".to_string(),
+                );
             }
 
             if !res.status().is_success() {
@@ -84,6 +92,7 @@ impl TransmissionManager {
 #[derive(Deserialize, Debug)]
 struct TransmissionTorrent {
     #[serde(rename = "id")]
+    #[allow(dead_code)]
     id: i64,
     #[serde(rename = "hashString")]
     hash_string: String,
@@ -118,10 +127,17 @@ impl TorrentClient for TransmissionManager {
         }
 
         let resp = self.request("torrent-add", args).await?;
-        Ok(resp.get("torrent-added").is_some() || resp.get("torrent-duplicate").is_some() || resp.get("torrent-added-row").is_some())
+        Ok(resp.get("torrent-added").is_some()
+            || resp.get("torrent-duplicate").is_some()
+            || resp.get("torrent-added-row").is_some())
     }
 
-    async fn add_torrent(&self, file_bytes: Vec<u8>, _filename: &str, category: Option<&str>) -> Result<bool, String> {
+    async fn add_torrent(
+        &self,
+        file_bytes: Vec<u8>,
+        _filename: &str,
+        category: Option<&str>,
+    ) -> Result<bool, String> {
         let base64_data = base64::engine::general_purpose::STANDARD.encode(&file_bytes);
         let mut args = serde_json::json!({
             "metainfo": base64_data,
@@ -133,7 +149,9 @@ impl TorrentClient for TransmissionManager {
         }
 
         let resp = self.request("torrent-add", args).await?;
-        Ok(resp.get("torrent-added").is_some() || resp.get("torrent-duplicate").is_some() || resp.get("torrent-added-row").is_some())
+        Ok(resp.get("torrent-added").is_some()
+            || resp.get("torrent-duplicate").is_some()
+            || resp.get("torrent-added-row").is_some())
     }
 
     async fn resume_all(&self) -> Result<(), String> {
@@ -147,28 +165,38 @@ impl TorrentClient for TransmissionManager {
     }
 
     async fn resume(&self, hash: &str) -> Result<(), String> {
-        self.request("torrent-start", serde_json::json!({ "ids": [hash] })).await?;
+        self.request("torrent-start", serde_json::json!({ "ids": [hash] }))
+            .await?;
         Ok(())
     }
 
     async fn pause(&self, hash: &str) -> Result<(), String> {
-        self.request("torrent-stop", serde_json::json!({ "ids": [hash] })).await?;
+        self.request("torrent-stop", serde_json::json!({ "ids": [hash] }))
+            .await?;
         Ok(())
     }
 
     async fn delete_one_no_data(&self, hash: &str) -> Result<(), String> {
-        self.request("torrent-remove", serde_json::json!({
-            "ids": [hash],
-            "delete-local-data": false
-        })).await?;
+        self.request(
+            "torrent-remove",
+            serde_json::json!({
+                "ids": [hash],
+                "delete-local-data": false
+            }),
+        )
+        .await?;
         Ok(())
     }
 
     async fn delete_one_data(&self, hash: &str) -> Result<(), String> {
-        self.request("torrent-remove", serde_json::json!({
-            "ids": [hash],
-            "delete-local-data": true
-        })).await?;
+        self.request(
+            "torrent-remove",
+            serde_json::json!({
+                "ids": [hash],
+                "delete-local-data": true
+            }),
+        )
+        .await?;
         Ok(())
     }
 
@@ -176,10 +204,14 @@ impl TorrentClient for TransmissionManager {
         let torrents = self.get_torrents(None, None).await?;
         let hashes: Vec<String> = torrents.into_iter().map(|t| t.hash).collect();
         if !hashes.is_empty() {
-            self.request("torrent-remove", serde_json::json!({
-                "ids": hashes,
-                "delete-local-data": false
-            })).await?;
+            self.request(
+                "torrent-remove",
+                serde_json::json!({
+                    "ids": hashes,
+                    "delete-local-data": false
+                }),
+            )
+            .await?;
         }
         Ok(())
     }
@@ -188,10 +220,14 @@ impl TorrentClient for TransmissionManager {
         let torrents = self.get_torrents(None, None).await?;
         let hashes: Vec<String> = torrents.into_iter().map(|t| t.hash).collect();
         if !hashes.is_empty() {
-            self.request("torrent-remove", serde_json::json!({
-                "ids": hashes,
-                "delete-local-data": true
-            })).await?;
+            self.request(
+                "torrent-remove",
+                serde_json::json!({
+                    "ids": hashes,
+                    "delete-local-data": true
+                }),
+            )
+            .await?;
         }
         Ok(())
     }
@@ -214,14 +250,22 @@ impl TorrentClient for TransmissionManager {
 
     async fn set_torrents_category(&self, category: &str, hashes: &str) -> Result<(), String> {
         let hash_list: Vec<&str> = hashes.split('|').collect();
-        self.request("torrent-set", serde_json::json!({
-            "ids": hash_list,
-            "labels": [category]
-        })).await?;
+        self.request(
+            "torrent-set",
+            serde_json::json!({
+                "ids": hash_list,
+                "labels": [category]
+            }),
+        )
+        .await?;
         Ok(())
     }
 
-    async fn get_torrent(&self, hash: &str, status_filter: Option<&str>) -> Result<Option<Torrent>, String> {
+    async fn get_torrent(
+        &self,
+        hash: &str,
+        status_filter: Option<&str>,
+    ) -> Result<Option<Torrent>, String> {
         let torrents = self.get_torrents(Some(hash), status_filter).await?;
         if torrents.is_empty() {
             Ok(None)
@@ -230,11 +274,24 @@ impl TorrentClient for TransmissionManager {
         }
     }
 
-    async fn get_torrents(&self, hash: Option<&str>, status_filter: Option<&str>) -> Result<Vec<Torrent>, String> {
+    async fn get_torrents(
+        &self,
+        hash: Option<&str>,
+        status_filter: Option<&str>,
+    ) -> Result<Vec<Torrent>, String> {
         let fields = vec![
-            "id", "hashString", "name", "percentDone", "rateDownload",
-            "status", "totalSize", "eta", "downloadDir", "labels",
-            "peersConnected", "peersSendingToUs"
+            "id",
+            "hashString",
+            "name",
+            "percentDone",
+            "rateDownload",
+            "status",
+            "totalSize",
+            "eta",
+            "downloadDir",
+            "labels",
+            "peersConnected",
+            "peersSendingToUs",
         ];
         let mut args = serde_json::json!({
             "fields": fields
@@ -246,7 +303,8 @@ impl TorrentClient for TransmissionManager {
 
         let resp = self.request("torrent-get", args).await?;
         let raw_torrents = resp.get("torrents").ok_or("No torrents in response")?;
-        let list: Vec<TransmissionTorrent> = serde_json::from_value(raw_torrents.clone()).map_err(|e| e.to_string())?;
+        let list: Vec<TransmissionTorrent> =
+            serde_json::from_value(raw_torrents.clone()).map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
         for t in list {
@@ -256,7 +314,8 @@ impl TorrentClient for TransmissionManager {
                 3 | 4 => "downloading",
                 5 | 6 => "seeding",
                 _ => "unknown",
-            }.to_string();
+            }
+            .to_string();
 
             let category = t.labels.and_then(|l| l.first().cloned());
             let save_path = Some(t.download_dir.clone());
@@ -335,16 +394,23 @@ impl TorrentClient for TransmissionManager {
 
     async fn get_speed_limit_mode(&self) -> Result<bool, String> {
         let resp = self.request("session-get", serde_json::json!({})).await?;
-        let active = resp.get("alt-speed-enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+        let active = resp
+            .get("alt-speed-enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         Ok(active)
     }
 
     async fn toggle_speed_limit(&self) -> Result<bool, String> {
         let current = self.get_speed_limit_mode().await?;
         let next = !current;
-        self.request("session-set", serde_json::json!({
-            "alt-speed-enabled": next
-        })).await?;
+        self.request(
+            "session-set",
+            serde_json::json!({
+                "alt-speed-enabled": next
+            }),
+        )
+        .await?;
         Ok(next)
     }
 }

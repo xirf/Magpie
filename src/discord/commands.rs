@@ -1,16 +1,19 @@
-use serenity::prelude::*;
-use serenity::model::gateway::Ready;
 use serenity::builder::CreateCommand;
-use serenity::model::application::CommandOptionType;
 use serenity::builder::CreateCommandOption;
+use serenity::builder::{
+    CreateActionRow, CreateButton, CreateInteractionResponse, CreateInteractionResponseMessage,
+    EditInteractionResponse,
+};
 use serenity::model::application::CommandInteraction;
-use serenity::builder::{CreateInteractionResponse, CreateInteractionResponseMessage, EditInteractionResponse, CreateButton, CreateActionRow};
+use serenity::model::application::CommandOptionType;
+use serenity::model::gateway::Ready;
+use serenity::prelude::*;
 use std::collections::HashMap;
 
+use super::state::{translate, Handler};
+use super::views;
 use crate::config::{Settings, UserSettings};
 use crate::utils::{convert_size, extract_hash_from_magnet, read_cpu_temp};
-use super::state::{Handler, translate};
-use super::views;
 
 pub async fn register_commands(ctx: &Context, ready: &Ready) {
     println!("Discord bot is online! Logged in as {}", ready.user.name);
@@ -19,7 +22,8 @@ pub async fn register_commands(ctx: &Context, ready: &Ready) {
 
     let list_cmd = CreateCommand::new("list").description("List active torrents and manage them");
     let stats_cmd = CreateCommand::new("stats").description("Get host system statistics");
-    let speedlimit_cmd = CreateCommand::new("speedlimit").description("Toggle alternate speed limits mode");
+    let speedlimit_cmd =
+        CreateCommand::new("speedlimit").description("Toggle alternate speed limits mode");
     let seeding_cmd = CreateCommand::new("seeding")
         .description("Set seeding policy after download completes (Admin only)")
         .add_option(
@@ -27,44 +31,62 @@ pub async fn register_commands(ctx: &Context, ready: &Ready) {
                 .required(false)
                 .add_string_choice("Always", "always")
                 .add_string_choice("Never", "never")
-                .add_string_choice("Admin Only", "admin_only")
+                .add_string_choice("Admin Only", "admin_only"),
         );
     let add_cmd = CreateCommand::new("add")
         .description("Add a magnet link or torrent file URL")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::String, "link", "Magnet link or torrent file URL")
-                .required(true)
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                "link",
+                "Magnet link or torrent file URL",
+            )
+            .required(true),
         );
     let info_cmd = CreateCommand::new("info")
         .description("Get details of a torrent by hash or message ID")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::String, "identifier", "Torrent Hash or Message ID")
-                .required(true)
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                "identifier",
+                "Torrent Hash or Message ID",
+            )
+            .required(true),
         );
     let link_cmd = CreateCommand::new("link")
         .description("Get S3 download link of a completed torrent by hash or message ID")
         .add_option(
-            CreateCommandOption::new(CommandOptionType::String, "identifier", "Torrent Hash or Message ID")
-                .required(true)
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                "identifier",
+                "Torrent Hash or Message ID",
+            )
+            .required(true),
         );
-    let info_menu = CreateCommand::new("Torrent Info")
-        .kind(serenity::model::application::CommandType::Message);
+    let info_menu =
+        CreateCommand::new("Torrent Info").kind(serenity::model::application::CommandType::Message);
     let link_menu = CreateCommand::new("Get Download Link")
         .kind(serenity::model::application::CommandType::Message);
 
     for guild in guilds {
         println!("Registering guild commands for guild ID: {}", guild.id);
-        let _ = guild.id.set_commands(&ctx.http, vec![
-            list_cmd.clone(),
-            stats_cmd.clone(),
-            speedlimit_cmd.clone(),
-            seeding_cmd.clone(),
-            add_cmd.clone(),
-            info_cmd.clone(),
-            link_cmd.clone(),
-            info_menu.clone(),
-            link_menu.clone(),
-        ]).await;
+        let _ = guild
+            .id
+            .set_commands(
+                &ctx.http,
+                vec![
+                    list_cmd.clone(),
+                    stats_cmd.clone(),
+                    speedlimit_cmd.clone(),
+                    seeding_cmd.clone(),
+                    add_cmd.clone(),
+                    info_cmd.clone(),
+                    link_cmd.clone(),
+                    info_menu.clone(),
+                    link_menu.clone(),
+                ],
+            )
+            .await;
     }
     println!("Discord slash commands registered successfully.");
 }
@@ -82,10 +104,19 @@ pub async fn handle_command(
         serenity::model::application::CommandType::ChatInput => {
             match name {
                 "list" => {
-                    if let Err(e) = views::show_torrent_list(handler, ctx, &interaction, user, None).await {
-                        let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new().content(format!("❌ Error: {}", e)).ephemeral(true)
-                        )).await;
+                    if let Err(e) =
+                        views::show_torrent_list(handler, ctx, &interaction, user, None).await
+                    {
+                        let _ = cmd
+                            .create_response(
+                                &ctx.http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .content(format!("❌ Error: {}", e))
+                                        .ephemeral(true),
+                                ),
+                            )
+                            .await;
                     }
                 }
                 "stats" => {
@@ -93,19 +124,24 @@ pub async fn handle_command(
                     // Get CPU temperature, usage, disk, memory via sysinfo
                     let mut sys = sysinfo::System::new_all();
                     sys.refresh_all();
-                    
+
                     let cpu_usage = sys.global_cpu_info().cpu_usage().round() as i32;
-                    
+
                     // Disk size
                     let mut disk_used = 0;
                     let mut disk_total = 0;
                     let mut disk_percent = 0;
                     let disks = sysinfo::Disks::new_with_refreshed_list();
-                    if let Some(disk) = disks.iter().find(|d| d.mount_point().to_str() == Some("/mnt")).or_else(|| disks.iter().next()) {
+                    if let Some(disk) = disks
+                        .iter()
+                        .find(|d| d.mount_point().to_str() == Some("/mnt"))
+                        .or_else(|| disks.iter().next())
+                    {
                         disk_total = disk.total_space();
                         disk_used = disk_total - disk.available_space();
                         if disk_total > 0 {
-                            disk_percent = ((disk_used as f64 / disk_total as f64) * 100.0).round() as i32;
+                            disk_percent =
+                                ((disk_used as f64 / disk_total as f64) * 100.0).round() as i32;
                         }
                     }
 
@@ -143,35 +179,77 @@ pub async fn handle_command(
                         .description(stats_text)
                         .field("🌿 Seeding Policy", seed_policy_label, true);
 
-                    let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().embed(embed)).await;
+                    let _ = cmd
+                        .edit_response(&ctx.http, EditInteractionResponse::new().embed(embed))
+                        .await;
                 }
                 "speedlimit" => {
                     if user.role == "reader" {
-                        let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new().content(translate(user, "You are not authorized to use this bot", None)).ephemeral(true)
-                        )).await;
+                        let _ = cmd
+                            .create_response(
+                                &ctx.http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .content(translate(
+                                            user,
+                                            "You are not authorized to use this bot",
+                                            None,
+                                        ))
+                                        .ephemeral(true),
+                                ),
+                            )
+                            .await;
                         return;
                     }
                     let _ = cmd.defer(&ctx.http).await;
                     match handler.manager.toggle_speed_limit().await {
                         Ok(active) => {
                             let mode_str = if active { "ON" } else { "OFF" };
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("Alternate speed limits toggled: **{}**", mode_str))).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(format!(
+                                        "Alternate speed limits toggled: **{}**",
+                                        mode_str
+                                    )),
+                                )
+                                .await;
                         }
                         Err(e) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("Error: {}", e))).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(format!("Error: {}", e)),
+                                )
+                                .await;
                         }
                     }
                 }
                 "seeding" => {
                     if user.role != "administrator" {
-                        let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new().content(translate(user, "You are not authorized to use this bot", None)).ephemeral(true)
-                        )).await;
+                        let _ = cmd
+                            .create_response(
+                                &ctx.http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .content(translate(
+                                            user,
+                                            "You are not authorized to use this bot",
+                                            None,
+                                        ))
+                                        .ephemeral(true),
+                                ),
+                            )
+                            .await;
                         return;
                     }
 
-                    let policy_opt = cmd.data.options.iter().find(|o| o.name == "policy").and_then(|o| o.value.as_str());
+                    let policy_opt = cmd
+                        .data
+                        .options
+                        .iter()
+                        .find(|o| o.name == "policy")
+                        .and_then(|o| o.value.as_str());
                     match policy_opt {
                         None => {
                             let current = settings.seed_after_download.as_str();
@@ -181,9 +259,19 @@ pub async fn handle_command(
                                 "admin_only" => "👑 Admin Only (seed only when an admin downloads)",
                                 _ => current,
                             };
-                            let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                                CreateInteractionResponseMessage::new().content(format!("**Current seeding policy:** {}", label)).ephemeral(true)
-                            )).await;
+                            let _ = cmd
+                                .create_response(
+                                    &ctx.http,
+                                    CreateInteractionResponse::Message(
+                                        CreateInteractionResponseMessage::new()
+                                            .content(format!(
+                                                "**Current seeding policy:** {}",
+                                                label
+                                            ))
+                                            .ephemeral(true),
+                                    ),
+                                )
+                                .await;
                         }
                         Some(policy) => {
                             let prev = settings.seed_after_download.as_str();
@@ -204,42 +292,79 @@ pub async fn handle_command(
                                 "admin_only" => "👑 Admin Only",
                                 _ => policy,
                             };
-                            let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                                CreateInteractionResponseMessage::new().content(format!("✅ Seeding policy updated:\n**{}** → **{}**", label_prev, label_new)).ephemeral(true)
-                            )).await;
+                            let _ = cmd
+                                .create_response(
+                                    &ctx.http,
+                                    CreateInteractionResponse::Message(
+                                        CreateInteractionResponseMessage::new()
+                                            .content(format!(
+                                                "✅ Seeding policy updated:\n**{}** → **{}**",
+                                                label_prev, label_new
+                                            ))
+                                            .ephemeral(true),
+                                    ),
+                                )
+                                .await;
                         }
                     }
                 }
                 "add" => {
                     if user.role == "reader" {
-                        let _ = cmd.create_response(&ctx.http, CreateInteractionResponse::Message(
-                            CreateInteractionResponseMessage::new().content(translate(user, "You are not authorized to use this bot", None)).ephemeral(true)
-                        )).await;
+                        let _ = cmd
+                            .create_response(
+                                &ctx.http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .content(translate(
+                                            user,
+                                            "You are not authorized to use this bot",
+                                            None,
+                                        ))
+                                        .ephemeral(true),
+                                ),
+                            )
+                            .await;
                         return;
                     }
 
                     let _ = cmd.defer(&ctx.http).await;
 
-                    let link_opt = cmd.data.options.iter()
+                    let link_opt = cmd
+                        .data
+                        .options
+                        .iter()
                         .find(|o| o.name == "link")
                         .and_then(|o| o.value.as_str())
                         .unwrap_or("");
 
-                    let before = handler.manager.get_torrents(None, None).await.unwrap_or_default();
+                    let before = handler
+                        .manager
+                        .get_torrents(None, None)
+                        .await
+                        .unwrap_or_default();
 
                     let result = if link_opt.to_lowercase().starts_with("magnet:?xt=urn:") {
                         match handler.manager.add_magnet(link_opt, None).await {
                             Ok(true) => {
                                 let hash_opt = extract_hash_from_magnet(link_opt);
-                                let mut details_msg = "✅ **Magnet link added successfully!**".to_string();
+                                let mut details_msg =
+                                    "✅ **Magnet link added successfully!**".to_string();
                                 if let Some(ref h) = hash_opt {
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                    if let Ok(Some(t)) = handler.manager.get_torrent(h, None).await {
+                                    if let Ok(Some(t)) = handler.manager.get_torrent(h, None).await
+                                    {
                                         let peers_line = match (t.num_seeds, t.num_peers) {
                                             (None, None) => String::new(),
-                                            (Some(seeds), Some(peers)) => format!("\n**Peers:** Seeds: `{}` | Peers: `{}`", seeds, peers),
-                                            (Some(seeds), None) => format!("\n**Peers:** Seeds: `{}`", seeds),
-                                            (None, Some(peers)) => format!("\n**Peers:** Peers: `{}`", peers),
+                                            (Some(seeds), Some(peers)) => format!(
+                                                "\n**Peers:** Seeds: `{}` | Peers: `{}`",
+                                                seeds, peers
+                                            ),
+                                            (Some(seeds), None) => {
+                                                format!("\n**Peers:** Seeds: `{}`", seeds)
+                                            }
+                                            (None, Some(peers)) => {
+                                                format!("\n**Peers:** Peers: `{}`", peers)
+                                            }
                                         };
                                         details_msg = format!("✅ **Magnet link added successfully!**\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`{}\n**Hash:** `{}`", t.name, convert_size(t.size), t.state, peers_line, t.hash);
                                     }
@@ -255,44 +380,75 @@ pub async fn handle_command(
                                 }
                             }
                         }
-                    } else if link_opt.to_lowercase().starts_with("http://") || link_opt.to_lowercase().starts_with("https://") {
-                        let filename = link_opt.split('/').last().unwrap_or("downloaded.torrent");
-                        let clean_filename = if filename.ends_with(".torrent") { filename } else { "downloaded.torrent" };
-     
+                    } else if link_opt.to_lowercase().starts_with("http://")
+                        || link_opt.to_lowercase().starts_with("https://")
+                    {
+                        let filename = link_opt.split('/').next_back().unwrap_or("downloaded.torrent");
+                        let clean_filename = if filename.ends_with(".torrent") {
+                            filename
+                        } else {
+                            "downloaded.torrent"
+                        };
+
                         match reqwest::get(link_opt).await {
-                            Ok(resp) => match resp.bytes().await {
-                                Ok(bytes) => {
-                                    match handler.manager.add_torrent(bytes.to_vec(), clean_filename, None).await {
-                                        Ok(true) => {
-                                            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                                            let after = handler.manager.get_torrents(None, None).await.unwrap_or_default();
-                                            let new_torrent = after.iter().find(|t_after| !before.iter().any(|t_before| t_before.hash == t_after.hash));
-                                            let (details_msg, hash_opt) = if let Some(t) = new_torrent {
-                                                let peers_line = match (t.num_seeds, t.num_peers) {
+                            Ok(resp) => {
+                                match resp.bytes().await {
+                                    Ok(bytes) => {
+                                        match handler
+                                            .manager
+                                            .add_torrent(bytes.to_vec(), clean_filename, None)
+                                            .await
+                                        {
+                                            Ok(true) => {
+                                                tokio::time::sleep(
+                                                    std::time::Duration::from_millis(500),
+                                                )
+                                                .await;
+                                                let after = handler
+                                                    .manager
+                                                    .get_torrents(None, None)
+                                                    .await
+                                                    .unwrap_or_default();
+                                                let new_torrent = after.iter().find(|t_after| {
+                                                    !before.iter().any(|t_before| {
+                                                        t_before.hash == t_after.hash
+                                                    })
+                                                });
+                                                let (details_msg, hash_opt) = if let Some(t) =
+                                                    new_torrent
+                                                {
+                                                    let peers_line = match (t.num_seeds, t.num_peers) {
                                                     (None, None) => String::new(),
                                                     (Some(seeds), Some(peers)) => format!("\n**Peers:** Seeds: `{}` | Peers: `{}`", seeds, peers),
                                                     (Some(seeds), None) => format!("\n**Peers:** Seeds: `{}`", seeds),
                                                     (None, Some(peers)) => format!("\n**Peers:** Peers: `{}`", peers),
                                                 };
-                                                (format!("✅ **Torrent file added successfully!**\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`{}\n**Hash:** `{}`", t.name, convert_size(t.size), t.state, peers_line, t.hash), Some(t.hash.clone()))
-                                            } else {
-                                                ("✅ Torrent file added successfully!".to_string(), None)
-                                            };
-                                            Ok((details_msg, hash_opt))
-                                        }
-                                        Ok(false) => Err("❌ Failed to add torrent file.".to_string()),
-                                        Err(e) => {
-                                            if e.contains("409") {
-                                                Err("⚠️ This torrent/magnet link is already in the download list.".to_string())
-                                            } else {
-                                                Err(format!("❌ Error: {}", e))
+                                                    (format!("✅ **Torrent file added successfully!**\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`{}\n**Hash:** `{}`", t.name, convert_size(t.size), t.state, peers_line, t.hash), Some(t.hash.clone()))
+                                                } else {
+                                                    (
+                                                        "✅ Torrent file added successfully!"
+                                                            .to_string(),
+                                                        None,
+                                                    )
+                                                };
+                                                Ok((details_msg, hash_opt))
+                                            }
+                                            Ok(false) => {
+                                                Err("❌ Failed to add torrent file.".to_string())
+                                            }
+                                            Err(e) => {
+                                                if e.contains("409") {
+                                                    Err("⚠️ This torrent/magnet link is already in the download list.".to_string())
+                                                } else {
+                                                    Err(format!("❌ Error: {}", e))
+                                                }
                                             }
                                         }
                                     }
+                                    Err(e) => Err(format!("Failed to read URL content: {}", e)),
                                 }
-                                Err(e) => Err(format!("Failed to read URL content: {}", e))
-                            },
-                            Err(e) => Err(format!("Failed to download from URL: {}", e))
+                            }
+                            Err(e) => Err(format!("Failed to download from URL: {}", e)),
                         }
                     } else {
                         Err("❌ Invalid link format. Must be a magnet link or http/https torrent URL.".to_string())
@@ -300,33 +456,63 @@ pub async fn handle_command(
 
                     match result {
                         Ok((msg, hash_opt)) => {
-                            if let Ok(resp_msg) = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(&msg)).await {
+                            if let Ok(resp_msg) = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(&msg),
+                                )
+                                .await
+                            {
                                 if let Some(h) = hash_opt {
                                     // Store channel_id with dc: prefix for progress tracking
                                     let channel_id_str = format!("dc:{}", resp_msg.channel_id);
-                                    let _ = crate::db::associate_message_with_torrent(&resp_msg.id.to_string(), &h, Some(&channel_id_str));
+                                    let _ = crate::db::associate_message_with_torrent(
+                                        &resp_msg.id.to_string(),
+                                        &h,
+                                        Some(&channel_id_str),
+                                    );
                                     let manager = handler.manager.clone();
                                     let http = ctx.http.clone();
                                     let cmd_clone = cmd.clone();
                                     let msg_content = msg.clone();
                                     tokio::spawn(async move {
                                         for _ in 0..15 {
-                                            tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
-                                            if let Ok(Some(t)) = manager.get_torrent(&h, None).await {
+                                            tokio::time::sleep(std::time::Duration::from_millis(
+                                                1500,
+                                            ))
+                                            .await;
+                                            if let Ok(Some(t)) = manager.get_torrent(&h, None).await
+                                            {
                                                 if t.size > 0 && t.name != h && !t.name.is_empty() {
-                                                    let peers_str = match (t.num_seeds, t.num_peers) {
-                                                        (Some(seeds), Some(peers)) => format!("Seeds: `{}` | Peers: `{}`", seeds, peers),
-                                                        (None, Some(peers)) => format!("Peers: `{}`", peers),
-                                                        (Some(seeds), None) => format!("Seeds: `{}`", seeds),
+                                                    let peers_str = match (t.num_seeds, t.num_peers)
+                                                    {
+                                                        (Some(seeds), Some(peers)) => format!(
+                                                            "Seeds: `{}` | Peers: `{}`",
+                                                            seeds, peers
+                                                        ),
+                                                        (None, Some(peers)) => {
+                                                            format!("Peers: `{}`", peers)
+                                                        }
+                                                        (Some(seeds), None) => {
+                                                            format!("Seeds: `{}`", seeds)
+                                                        }
                                                         (None, None) => "Unknown".to_string(),
                                                     };
-                                                    let prefix = if msg_content.contains("Magnet link") {
+                                                    let prefix = if msg_content
+                                                        .contains("Magnet link")
+                                                    {
                                                         "✅ **Magnet link added successfully!**"
                                                     } else {
                                                         "✅ **Torrent file added successfully!**"
                                                     };
                                                     let updated_msg = format!("{}\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`\n**Peers:** {}\n**Hash:** `{}`", prefix, t.name, convert_size(t.size), t.state, peers_str, t.hash);
-                                                    let _ = cmd_clone.edit_response(&http, EditInteractionResponse::new().content(updated_msg)).await;
+                                                    let _ = cmd_clone
+                                                        .edit_response(
+                                                            &http,
+                                                            EditInteractionResponse::new()
+                                                                .content(updated_msg),
+                                                        )
+                                                        .await;
                                                     break;
                                                 }
                                             }
@@ -336,13 +522,21 @@ pub async fn handle_command(
                             }
                         }
                         Err(msg) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(msg)).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(msg),
+                                )
+                                .await;
                         }
                     }
                 }
                 "info" => {
                     let _ = cmd.defer(&ctx.http).await;
-                    let identifier = cmd.data.options.iter()
+                    let identifier = cmd
+                        .data
+                        .options
+                        .iter()
                         .find(|o| o.name == "identifier")
                         .and_then(|o| o.value.as_str())
                         .unwrap_or("");
@@ -352,11 +546,22 @@ pub async fn handle_command(
                         hash = h;
                     }
 
-                    let _ = views::show_torrent_details(handler, ctx, &interaction, user, &hash, settings).await;
+                    let _ = views::show_torrent_details(
+                        handler,
+                        ctx,
+                        &interaction,
+                        user,
+                        &hash,
+                        settings,
+                    )
+                    .await;
                 }
                 "link" => {
                     let _ = cmd.defer_ephemeral(&ctx.http).await;
-                    let identifier = cmd.data.options.iter()
+                    let identifier = cmd
+                        .data
+                        .options
+                        .iter()
                         .find(|o| o.name == "identifier")
                         .and_then(|o| o.value.as_str())
                         .unwrap_or("");
@@ -371,32 +576,58 @@ pub async fn handle_command(
                             if torrent.progress >= 1.0 {
                                 match crate::s3::get_download_link(settings, &torrent).await {
                                     Ok(Some(url)) => {
-                                        let row = CreateActionRow::Buttons(vec![
-                                            CreateButton::new_link(url).label("Download")
-                                        ]);
+                                        let row =
+                                            CreateActionRow::Buttons(vec![CreateButton::new_link(
+                                                url,
+                                            )
+                                            .label("Download")]);
                                         let content = if settings.local_server.enabled {
-                                            format!("🔗 Here is your download link for **{}**:", torrent.name)
+                                            format!(
+                                                "🔗 Here is your download link for **{}**:",
+                                                torrent.name
+                                            )
                                         } else {
                                             format!("🔗 Here is your temporary download link for **{}**:\n*(Expires in 1 hour)*", torrent.name)
                                         };
-                                        let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new()
-                                            .content(content)
-                                            .components(vec![row])
-                                        ).await;
+                                        let _ = cmd
+                                            .edit_response(
+                                                &ctx.http,
+                                                EditInteractionResponse::new()
+                                                    .content(content)
+                                                    .components(vec![row]),
+                                            )
+                                            .await;
                                     }
                                     Ok(None) => {
                                         let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Download links are either disabled or not configured.")).await;
                                     }
                                     Err(e) => {
-                                        let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("Error: {}", e))).await;
+                                        let _ = cmd
+                                            .edit_response(
+                                                &ctx.http,
+                                                EditInteractionResponse::new()
+                                                    .content(format!("Error: {}", e)),
+                                            )
+                                            .await;
                                     }
                                 }
                             } else {
-                                let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Torrent is not fully completed yet.")).await;
+                                let _ = cmd
+                                    .edit_response(
+                                        &ctx.http,
+                                        EditInteractionResponse::new()
+                                            .content("❌ Torrent is not fully completed yet."),
+                                    )
+                                    .await;
                             }
                         }
                         _ => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Torrent not found.")).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content("❌ Torrent not found."),
+                                )
+                                .await;
                         }
                     }
                 }
@@ -410,59 +641,116 @@ pub async fn handle_command(
                     let _ = cmd.defer(&ctx.http).await;
                     match crate::db::get_torrent_hash_for_message(&target_msg_id) {
                         Ok(Some(hash)) => {
-                            let _ = views::show_torrent_details(handler, ctx, &interaction, user, &hash, settings).await;
+                            let _ = views::show_torrent_details(
+                                handler,
+                                ctx,
+                                &interaction,
+                                user,
+                                &hash,
+                                settings,
+                            )
+                            .await;
                         }
                         Ok(None) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ This message is not associated with any torrent.")).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(
+                                        "❌ This message is not associated with any torrent.",
+                                    ),
+                                )
+                                .await;
                         }
                         Err(e) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("❌ Database error: {}", e))).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new()
+                                        .content(format!("❌ Database error: {}", e)),
+                                )
+                                .await;
                         }
                     }
                 }
                 "Get Download Link" => {
                     let _ = cmd.defer_ephemeral(&ctx.http).await;
                     match crate::db::get_torrent_hash_for_message(&target_msg_id) {
-                        Ok(Some(hash)) => {
-                            match handler.manager.get_torrent(&hash, None).await {
-                                Ok(Some(torrent)) => {
-                                    if torrent.progress >= 1.0 {
-                                        match crate::s3::get_download_link(settings, &torrent).await {
-                                            Ok(Some(url)) => {
-                                                let row = CreateActionRow::Buttons(vec![
-                                                    CreateButton::new_link(url).label("Download")
-                                                ]);
-                                                let content = if settings.local_server.enabled {
-                                                    format!("🔗 Here is your download link for **{}**:", torrent.name)
-                                                } else {
-                                                    format!("🔗 Here is your temporary download link for **{}**:\n*(Expires in 1 hour)*", torrent.name)
-                                                };
-                                                let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new()
-                                                    .content(content)
-                                                    .components(vec![row])
-                                                ).await;
-                                            }
-                                            Ok(None) => {
-                                                let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Download links are either disabled or not configured.")).await;
-                                            }
-                                            Err(e) => {
-                                                let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("Error: {}", e))).await;
-                                            }
+                        Ok(Some(hash)) => match handler.manager.get_torrent(&hash, None).await {
+                            Ok(Some(torrent)) => {
+                                if torrent.progress >= 1.0 {
+                                    match crate::s3::get_download_link(settings, &torrent).await {
+                                        Ok(Some(url)) => {
+                                            let row = CreateActionRow::Buttons(vec![
+                                                CreateButton::new_link(url).label("Download"),
+                                            ]);
+                                            let content = if settings.local_server.enabled {
+                                                format!(
+                                                    "🔗 Here is your download link for **{}**:",
+                                                    torrent.name
+                                                )
+                                            } else {
+                                                format!("🔗 Here is your temporary download link for **{}**:\n*(Expires in 1 hour)*", torrent.name)
+                                            };
+                                            let _ = cmd
+                                                .edit_response(
+                                                    &ctx.http,
+                                                    EditInteractionResponse::new()
+                                                        .content(content)
+                                                        .components(vec![row]),
+                                                )
+                                                .await;
                                         }
-                                    } else {
-                                        let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Torrent is not fully completed yet.")).await;
+                                        Ok(None) => {
+                                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Download links are either disabled or not configured.")).await;
+                                        }
+                                        Err(e) => {
+                                            let _ = cmd
+                                                .edit_response(
+                                                    &ctx.http,
+                                                    EditInteractionResponse::new()
+                                                        .content(format!("Error: {}", e)),
+                                                )
+                                                .await;
+                                        }
                                     }
-                                }
-                                _ => {
-                                    let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ Torrent not found in client.")).await;
+                                } else {
+                                    let _ = cmd
+                                        .edit_response(
+                                            &ctx.http,
+                                            EditInteractionResponse::new()
+                                                .content("❌ Torrent is not fully completed yet."),
+                                        )
+                                        .await;
                                 }
                             }
-                        }
+                            _ => {
+                                let _ = cmd
+                                    .edit_response(
+                                        &ctx.http,
+                                        EditInteractionResponse::new()
+                                            .content("❌ Torrent not found in client."),
+                                    )
+                                    .await;
+                            }
+                        },
                         Ok(None) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content("❌ This message is not associated with any torrent.")).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new().content(
+                                        "❌ This message is not associated with any torrent.",
+                                    ),
+                                )
+                                .await;
                         }
                         Err(e) => {
-                            let _ = cmd.edit_response(&ctx.http, EditInteractionResponse::new().content(format!("❌ Database error: {}", e))).await;
+                            let _ = cmd
+                                .edit_response(
+                                    &ctx.http,
+                                    EditInteractionResponse::new()
+                                        .content(format!("❌ Database error: {}", e)),
+                                )
+                                .await;
                         }
                     }
                 }

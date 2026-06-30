@@ -1,16 +1,16 @@
 mod config;
-mod i18n;
 mod db;
+mod discord;
+mod i18n;
+mod qbittorrent;
 mod redis_client;
 mod s3;
-mod qbittorrent;
-mod transmission;
-mod torrent_client;
-mod discord;
-mod telegram;
-mod tasks;
-mod utils;
 mod server;
+mod tasks;
+mod telegram;
+mod torrent_client;
+mod transmission;
+mod utils;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -32,7 +32,10 @@ async fn main() {
             settings.users = synced_users;
         }
         Err(e) => {
-            eprintln!("Failed to sync users with SQLite database, falling back to config users: {:?}", e);
+            eprintln!(
+                "Failed to sync users with SQLite database, falling back to config users: {:?}",
+                e
+            );
         }
     }
 
@@ -49,15 +52,15 @@ async fn main() {
     // Check active bot providers
     let (is_tg_active, is_dc_active) = {
         let s = settings_arc.read().await;
-        
-        let tg = s.telegram.enabled 
-            && !s.telegram.bot_token.is_empty() 
+
+        let tg = s.telegram.enabled
+            && !s.telegram.bot_token.is_empty()
             && s.telegram.bot_token != "PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE";
-            
-        let dc = s.discord.enabled 
-            && s.discord.token.is_some() 
+
+        let dc = s.discord.enabled
+            && s.discord.token.is_some()
             && s.discord.token.as_deref().unwrap_or("") != "PUT_YOUR_DISCORD_BOT_TOKEN_HERE";
-            
+
         (tg, dc)
     };
 
@@ -78,7 +81,12 @@ async fn main() {
     let mut tg_bot = None;
     if is_tg_active {
         println!("Starting Telegram Bot...");
-        let bot = telegram::start_telegram_bot(settings_arc.clone(), redis.clone(), torrent_client.clone()).await;
+        let bot = telegram::start_telegram_bot(
+            settings_arc.clone(),
+            redis.clone(),
+            torrent_client.clone(),
+        )
+        .await;
         tg_bot = Some(bot);
     } else {
         println!("Telegram bot is disabled or not configured.");
@@ -146,7 +154,8 @@ async fn main() {
                 &redis_for_check,
                 &current_settings,
                 &*client_for_check,
-            ).await;
+            )
+            .await;
         }
     });
 
@@ -168,7 +177,8 @@ async fn main() {
                 &redis_for_progress,
                 &current_settings,
                 &*client_for_progress,
-            ).await;
+            )
+            .await;
         }
     });
 
