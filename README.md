@@ -2,19 +2,20 @@
 
 Magpie is a modular, performant chatbot that allows you to control your torrent client directly through **Telegram** and/or **Discord**. Optimized specifically for low-resource ARM boards (Set-Top Boxes, Raspberry Pi, Orange Pi, etc.).
 
-Magpie supports both **qBittorrent** (Web API) and **Transmission** (JSON-RPC daemon) out of the box.
+Magpie supports **qBittorrent** (Web API), **Transmission** (JSON-RPC daemon), and **Aria2** (JSON-RPC) out of the box.
 
 ---
 
 ## Features
 
 * **Multi-Platform Support**: Run the bot on Telegram, Discord, or both simultaneously.
-* **Dual Client Engine**: Supports **qBittorrent** and **Transmission**.
+* **Multi-Client Engine**: Supports **qBittorrent**, **Transmission**, and **Aria2** (ideal for generic multipart file downloads).
 * **Torrent Control**:
   * List active, completed, or downloading torrents.
   * Pause, Resume, and Delete torrents (with options to keep or delete downloaded data).
   * Assign labels/categories dynamically.
   * Toggle Alternate Speed Limits (alt-speed).
+  * **Multi-URL Support:** Send multiple generic HTTP/HTTPS or magnet links at once to batch process downloads.
 * **Embedded Download Web Server**:
   * **Direct Download**: Allows local network direct download link generation, avoiding Cloudflare bandwidth round-trips for S3 uploads.
   * **Timer-Based Secure Links**: Links are generated with a secure random token cached in SQLite that automatically expires.
@@ -37,10 +38,13 @@ cp data/config.example.yml data/config.yml
 
 ```yaml
 client:
-  type: qbittorrent               # Client type: 'qbittorrent' or 'transmission'
-  host: http://localhost:8080/
-  user: admin
-  password: adminadmin
+  type: qbittorrent               # Client type: 'qbittorrent', 'transmission', or 'aria2'
+  host: http://localhost:8080/    # Use http://localhost:6800/jsonrpc for Aria2
+  user: admin                     # Ignored for Aria2
+  password: adminadmin            # For Aria2, this is your RPC secret token
+  split: 5                        # (Aria2 only) Connections per file for multipart downloads
+  max_concurrent_downloads: 5     # (Aria2 only) Maximum simultaneous downloads
+
 
 telegram:
   enabled: true
