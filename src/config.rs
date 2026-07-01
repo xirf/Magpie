@@ -13,12 +13,24 @@ pub struct ClientSettings {
     pub user: String,
     #[serde(default = "default_password")]
     pub password: String,
+    /// aria2 only: number of connections per download (default: 5)
+    pub split: Option<u32>,
+    /// aria2 only: max concurrent downloads (default: 5)
+    pub max_concurrent: Option<u32>,
 }
 
-fn default_client_type() -> String { "qbittorrent".to_string() }
-fn default_host() -> String { "http://localhost:8080".to_string() }
-fn default_user() -> String { "admin".to_string() }
-fn default_password() -> String { "adminadmin".to_string() }
+fn default_client_type() -> String {
+    "qbittorrent".to_string()
+}
+fn default_host() -> String {
+    "http://localhost:8080".to_string()
+}
+fn default_user() -> String {
+    "admin".to_string()
+}
+fn default_password() -> String {
+    "adminadmin".to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TelegramProxySettings {
@@ -30,7 +42,9 @@ pub struct TelegramProxySettings {
     pub password: Option<String>,
 }
 
-fn default_proxy_scheme() -> String { "http".to_string() }
+fn default_proxy_scheme() -> String {
+    "http".to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TelegramSettings {
@@ -41,7 +55,9 @@ pub struct TelegramSettings {
     pub proxy: Option<TelegramProxySettings>,
 }
 
-fn default_telegram_token() -> String { "PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE".to_string() }
+fn default_telegram_token() -> String {
+    "PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE".to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiscordSettings {
@@ -64,7 +80,9 @@ pub struct UserSettings {
     pub notification_filter: Vec<String>,
 }
 
-fn default_role() -> String { "reader".to_string() }
+fn default_role() -> String {
+    "reader".to_string()
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RedisSettings {
@@ -88,11 +106,19 @@ pub struct S3Settings {
     pub mode: String,
 }
 
-fn default_link_expiry() -> u64 { 3600 }
-fn default_s3_mode() -> String { "mount".to_string() }
+fn default_link_expiry() -> u64 {
+    3600
+}
+fn default_s3_mode() -> String {
+    "mount".to_string()
+}
 
-fn default_true() -> bool { true }
-fn default_false() -> bool { false }
+fn default_true() -> bool {
+    true
+}
+fn default_false() -> bool {
+    false
+}
 
 fn default_telegram_settings() -> TelegramSettings {
     TelegramSettings {
@@ -139,7 +165,9 @@ pub struct LocalServerSettings {
     pub link_expiry: u64,
 }
 
-fn default_local_link_expiry() -> u64 { 3600 }
+fn default_local_link_expiry() -> u64 {
+    3600
+}
 
 fn default_local_server_settings() -> LocalServerSettings {
     LocalServerSettings {
@@ -161,8 +189,12 @@ pub struct NotificationSettings {
     pub min_size_gb: f64,
 }
 
-fn default_progress_interval() -> u32 { 10 }
-fn default_min_size_gb() -> f64 { 1.0 }
+fn default_progress_interval() -> u32 {
+    10
+}
+fn default_min_size_gb() -> f64 {
+    1.0
+}
 
 fn default_notification_settings() -> NotificationSettings {
     NotificationSettings {
@@ -192,7 +224,9 @@ pub struct Settings {
     pub notifications: NotificationSettings,
 }
 
-fn default_seed_after_download() -> String { "always".to_string() }
+fn default_seed_after_download() -> String {
+    "always".to_string()
+}
 
 impl Settings {
     pub fn get_default_settings() -> Self {
@@ -202,6 +236,8 @@ impl Settings {
                 host: "http://localhost:8080".to_string(),
                 user: "admin".to_string(),
                 password: "adminadmin".to_string(),
+                split: None,
+                max_concurrent: None,
             },
             telegram: TelegramSettings {
                 enabled: true,
@@ -305,6 +341,9 @@ impl Settings {
             (Some(u), Some(p)) => format!("{}:{}@", u, p),
             _ => "".to_string(),
         };
-        format!("{}://{}{}:{}", proxy.scheme, auth, proxy.hostname, proxy.port)
+        format!(
+            "{}://{}{}:{}",
+            proxy.scheme, auth, proxy.hostname, proxy.port
+        )
     }
 }

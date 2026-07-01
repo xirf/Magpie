@@ -1,5 +1,5 @@
 use serde_json::Value;
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use std::sync::OnceLock;
 
 static TRANSLATIONS: OnceLock<HashMap<String, HashMap<String, String>>> = OnceLock::new();
@@ -35,8 +35,7 @@ pub fn t(key: &str, locale: &str, vars: Option<&HashMap<String, String>>) -> Str
     let translations = TRANSLATIONS.get_or_init(init_translations);
 
     // Get the translation for the locale, fallback to 'en', then fallback to key
-    let lang_map = translations.get(locale)
-        .or_else(|| translations.get("en"));
+    let lang_map = translations.get(locale).or_else(|| translations.get("en"));
 
     let mut template = match lang_map {
         Some(m) => m.get(key).cloned().unwrap_or_else(|| key.to_string()),
@@ -91,17 +90,28 @@ mod tests {
     #[test]
     fn test_t_substitutions() {
         let mut vars = HashMap::new();
-        vars.insert("name".to_string(), "ubuntu-24.04-desktop-amd64.iso".to_string());
+        vars.insert(
+            "name".to_string(),
+            "ubuntu-24.04-desktop-amd64.iso".to_string(),
+        );
 
         // English
         assert_eq!(
-            t("Torrent {name} has finished downloading!", "en", Some(&vars)),
+            t(
+                "Torrent {name} has finished downloading!",
+                "en",
+                Some(&vars)
+            ),
             "Torrent ubuntu-24.04-desktop-amd64.iso has finished downloading!"
         );
 
         // Italian
         assert_eq!(
-            t("Torrent {name} has finished downloading!", "it", Some(&vars)),
+            t(
+                "Torrent {name} has finished downloading!",
+                "it",
+                Some(&vars)
+            ),
             "Il torrent ubuntu-24.04-desktop-amd64.iso è stato scaricato!"
         );
 
@@ -129,4 +139,3 @@ mod tests {
         assert!(stats_text.contains("**Utilizzo disco:** 450 GB"));
     }
 }
-

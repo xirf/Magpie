@@ -1,21 +1,22 @@
-use std::collections::HashMap;
+use serenity::all::UserId;
+use serenity::builder::{CreateActionRow, CreateButton, CreateMessage};
+use std::collections::BTreeMap as HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
-use teloxide::Bot;
 use teloxide::prelude::*;
-use serenity::all::UserId;
-use serenity::builder::{CreateMessage, CreateButton, CreateActionRow};
+use teloxide::Bot;
+use tokio::sync::RwLock;
 
 use crate::config::{Settings, UserSettings};
+use crate::db::{get_messages_for_torrent, is_notification_sent, mark_notification_sent};
+use crate::i18n::t;
 use crate::redis_client::RedisWrapper;
 use crate::torrent_client::TorrentClient;
-use crate::db::{is_notification_sent, mark_notification_sent, get_messages_for_torrent};
-use crate::utils::{escape_markdown, convert_size, format_progress};
-use crate::i18n::t;
+use crate::utils::{convert_size, escape_markdown, format_progress};
 
 fn user_filters(users: &[UserSettings], category: Option<&str>) -> Vec<UserSettings> {
-    users.iter()
+    users
+        .iter()
         .filter(|user| {
             if user.notification_filter.is_empty() {
                 return true;
@@ -50,6 +51,26 @@ pub async fn torrent_finished(
         let exists_in_sqlite = is_notification_sent(&torrent.hash);
 
         if !exists_in_redis && !exists_in_sqlite {
+            // Mark this item done in its batch (if any) and check whether the whole batch finished
+            let batch_id = crate::db::get_batch_for_gid(&torrent.hash);
+            let _ = crate::db::mark_batch_item_complete(&torrent.hash);
+
+            if let Some(ref bid) = batch_id {
+                if !crate::db::is_batch_complete(bid) {
+                    // Other items in this batch are still downloading — just mark and skip
+                    println!(
+                        "[Tasks] Batch {} not yet complete, deferring notification for {}",
+                        bid, torrent.name
+                    );
+                    // Still mark notification sent so we don't re-process this GID
+                    redis.set(&torrent.hash, "true", Some(10 * 86400)).await;
+                    let _ = mark_notification_sent(&torrent.hash);
+                    continue;
+                }
+                // All batch items are done — fall through to upload + single notification below
+                println!("[Tasks] Batch {} complete, processing now.", bid);
+            }
+
             let mut download_link = String::new();
 
             let has_local_server = settings.local_server.enabled;
@@ -57,14 +78,16 @@ pub async fn torrent_finished(
 
             if has_local_server || has_s3 {
                 println!("[Link] Processing completed torrent: {}", torrent.name);
-                
+
                 // If local server is not enabled, but S3 is, and mode is "upload", do the upload
                 if !has_local_server && has_s3 && settings.s3.mode == "upload" {
                     let content_path_str = torrent.content_path.clone().unwrap_or_default();
                     if !content_path_str.is_empty() {
                         let content_path = std::path::Path::new(&content_path_str);
                         println!("[S3] Uploading {:?} to bucket...", content_path);
-                        if let Err(e) = crate::s3::upload_folder_or_file_to_s3(settings, content_path, "").await {
+                        if let Err(e) =
+                            crate::s3::upload_folder_or_file_to_s3(settings, content_path, "").await
+                        {
                             eprintln!("[S3] Failed to upload to S3: {:?}", e);
                             continue;
                         }
@@ -78,14 +101,20 @@ pub async fn torrent_finished(
                 match crate::s3::get_download_link(settings, &torrent).await {
                     Ok(Some(url)) => {
                         download_link = url;
-                        println!("[Link] Generated download link for {}: {}", torrent.name, download_link);
-                        
+                        println!(
+                            "[Link] Generated download link for {}: {}",
+                            torrent.name, download_link
+                        );
+
                         // If we uploaded to S3, delete local torrent data
                         if !has_local_server && has_s3 && settings.s3.mode == "upload" {
                             if let Err(e) = manager.delete_one_data(&torrent.hash).await {
                                 eprintln!("[S3] Failed to delete local torrent data: {:?}", e);
                             } else {
-                                println!("[S3] Deleted local torrent and data for {}", torrent.name);
+                                println!(
+                                    "[S3] Deleted local torrent and data for {}",
+                                    torrent.name
+                                );
                             }
                         }
                     }
@@ -101,24 +130,49 @@ pub async fn torrent_finished(
             for user in &target_users {
                 if user.notify {
                     let user_lang = user.locale.as_deref().unwrap_or("en");
-                    
+
+                    // For batch completions, summarise the whole batch in one message
+                    let message_name = if let Some(ref bid) = batch_id {
+                        let gids = crate::db::get_batch_gids(bid);
+                        format!("batch of {} files", gids.len())
+                    } else {
+                        escape_markdown(&torrent.name)
+                    };
+
                     let mut vars = HashMap::new();
-                    vars.insert("name".to_string(), escape_markdown(&torrent.name));
-                    let mut message = t("Torrent {name} has finished downloading!", user_lang, Some(&vars));
+                    vars.insert("name".to_string(), message_name);
+                    let mut message = t(
+                        "Torrent {name} has finished downloading!",
+                        user_lang,
+                        Some(&vars),
+                    );
 
                     if !download_link.is_empty() && user.discord_id.is_none() {
                         if settings.local_server.enabled {
-                            message.push_str(&format!("\n\n🔗 **[Download Link]({})**", download_link));
+                            message.push_str(&format!(
+                                "\n\n🔗 **[Download Link]({})**",
+                                download_link
+                            ));
                         } else {
-                            message.push_str(&format!("\n\n🔗 **[Download Link]({})** *(Expires in 1 hour)*", download_link));
+                            message.push_str(&format!(
+                                "\n\n🔗 **[Download Link]({})** *(Expires in 1 hour)*",
+                                download_link
+                            ));
                         }
                     }
 
                     // Telegram notification
                     if user.user_id != 0 {
                         if let Some(bot) = tg_bot {
-                            if let Ok(sent_msg) = bot.send_message(teloxide::types::ChatId(user.user_id), &message).await {
-                                let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash, None);
+                            if let Ok(sent_msg) = bot
+                                .send_message(teloxide::types::ChatId(user.user_id), &message)
+                                .await
+                            {
+                                let _ = crate::db::associate_message_with_torrent(
+                                    &sent_msg.id.to_string(),
+                                    &torrent.hash,
+                                    None,
+                                );
                             }
                         }
                     }
@@ -130,13 +184,19 @@ pub async fn torrent_finished(
                                 if let Ok(dc_user) = UserId::new(uid).to_user(dc_http).await {
                                     let mut msg = CreateMessage::new().content(&message);
                                     if !download_link.is_empty() {
-                                        let row = CreateActionRow::Buttons(vec![
-                                            CreateButton::new_link(&download_link).label("Download")
-                                        ]);
+                                        let row =
+                                            CreateActionRow::Buttons(vec![CreateButton::new_link(
+                                                &download_link,
+                                            )
+                                            .label("Download")]);
                                         msg = msg.components(vec![row]);
                                     }
                                     if let Ok(sent_msg) = dc_user.dm(dc_http, msg).await {
-                                        let _ = crate::db::associate_message_with_torrent(&sent_msg.id.to_string(), &torrent.hash, None);
+                                        let _ = crate::db::associate_message_with_torrent(
+                                            &sent_msg.id.to_string(),
+                                            &torrent.hash,
+                                            None,
+                                        );
                                     }
                                 }
                             }
@@ -160,9 +220,15 @@ pub async fn torrent_finished(
             let is_uploaded_and_deleted = settings.s3.enabled && settings.s3.mode == "upload";
             if should_pause && !is_uploaded_and_deleted {
                 if let Err(e) = manager.pause(&torrent.hash).await {
-                    eprintln!("[Tasks] Failed to pause torrent \"{}\": {:?}", torrent.name, e);
+                    eprintln!(
+                        "[Tasks] Failed to pause torrent \"{}\": {:?}",
+                        torrent.name, e
+                    );
                 } else {
-                    println!("[Tasks] Paused completed torrent \"{}\" to stop seeding per policy: {}", torrent.name, seed_policy);
+                    println!(
+                        "[Tasks] Paused completed torrent \"{}\" to stop seeding per policy: {}",
+                        torrent.name, seed_policy
+                    );
                 }
             }
 
@@ -182,7 +248,11 @@ pub async fn torrent_progress_update(
     settings: &Settings,
     manager: &dyn TorrentClient,
 ) {
-    let interval = settings.notifications.progress_report_interval.max(1).min(100);
+    let interval = settings
+        .notifications
+        .progress_report_interval
+        .max(1)
+        .min(100);
     let min_bytes = (settings.notifications.min_size_gb * 1_073_741_824.0) as u64;
 
     let downloading = match manager.get_torrents(None, Some("downloading")).await {
@@ -206,7 +276,9 @@ pub async fn torrent_progress_update(
         }
 
         let redis_key = format!("progress_notified:{}", torrent.hash);
-        let last_reported: u32 = redis.get(&redis_key).await
+        let last_reported: u32 = redis
+            .get(&redis_key)
+            .await
             .unwrap_or_default()
             .parse()
             .unwrap_or(0);
@@ -232,7 +304,9 @@ pub async fn torrent_progress_update(
         if let Some(bot) = tg_bot {
             if let Ok(entries) = get_messages_for_torrent(&torrent.hash) {
                 for (msg_id_str, chat_id_str) in &entries {
-                    if let (Ok(msg_id_i), Some(chat_id_s)) = (msg_id_str.parse::<i32>(), chat_id_str) {
+                    if let (Ok(msg_id_i), Some(chat_id_s)) =
+                        (msg_id_str.parse::<i32>(), chat_id_str)
+                    {
                         if let Ok(chat_id_i) = chat_id_s.parse::<i64>() {
                             let tg_text = format!(
                                 "✅ *{}*\n{}{}\n*State:* `{}` \\| *Size:* `{}` \\| *Speed:* `{}/s`\n*Hash:* `{}`",
@@ -244,11 +318,14 @@ pub async fn torrent_progress_update(
                                 escape_markdown(&speed_str),
                                 escape_markdown(&torrent.hash),
                             );
-                            let _ = bot.edit_message_text(
-                                teloxide::types::ChatId(chat_id_i),
-                                teloxide::types::MessageId(msg_id_i),
-                                tg_text,
-                            ).parse_mode(teloxide::types::ParseMode::MarkdownV2).await;
+                            let _ = bot
+                                .edit_message_text(
+                                    teloxide::types::ChatId(chat_id_i),
+                                    teloxide::types::MessageId(msg_id_i),
+                                    tg_text,
+                                )
+                                .parse_mode(teloxide::types::ParseMode::MarkdownV2)
+                                .await;
                         }
                     }
                 }
@@ -284,7 +361,9 @@ pub async fn torrent_progress_update(
         }
 
         // Record the milestone in Redis (keep for 30 days)
-        redis.set(&redis_key, &milestone.to_string(), Some(30 * 86400)).await;
+        redis
+            .set(&redis_key, &milestone.to_string(), Some(30 * 86400))
+            .await;
     }
 }
 
@@ -305,7 +384,9 @@ pub fn watch_config(settings: Arc<RwLock<Settings>>) {
                                     let mut s_write = settings.write().await;
                                     *s_write = new_settings;
                                 }
-                                println!("Settings reloaded successfully due to config file change");
+                                println!(
+                                    "Settings reloaded successfully due to config file change"
+                                );
                             }
                         }
                         last_modified = Some(modified);
