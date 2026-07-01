@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use teloxide::net::Download;
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};

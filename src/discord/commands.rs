@@ -8,7 +8,7 @@ use serenity::model::application::CommandInteraction;
 use serenity::model::application::CommandOptionType;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 
 use super::state::{translate, Handler};
 use super::views;
@@ -383,73 +383,102 @@ pub async fn handle_command(
                     } else if link_opt.to_lowercase().starts_with("http://")
                         || link_opt.to_lowercase().starts_with("https://")
                     {
-                        let filename = link_opt.split('/').next_back().unwrap_or("downloaded.torrent");
-                        let clean_filename = if filename.ends_with(".torrent") {
-                            filename
-                        } else {
-                            "downloaded.torrent"
-                        };
+                        let is_torrent_url = link_opt.to_lowercase().ends_with(".torrent");
 
-                        match reqwest::get(link_opt).await {
-                            Ok(resp) => {
-                                match resp.bytes().await {
-                                    Ok(bytes) => {
-                                        match handler
-                                            .manager
-                                            .add_torrent(bytes.to_vec(), clean_filename, None)
-                                            .await
-                                        {
-                                            Ok(true) => {
-                                                tokio::time::sleep(
-                                                    std::time::Duration::from_millis(500),
-                                                )
-                                                .await;
-                                                let after = handler
-                                                    .manager
-                                                    .get_torrents(None, None)
-                                                    .await
-                                                    .unwrap_or_default();
-                                                let new_torrent = after.iter().find(|t_after| {
-                                                    !before.iter().any(|t_before| {
-                                                        t_before.hash == t_after.hash
-                                                    })
-                                                });
-                                                let (details_msg, hash_opt) = if let Some(t) =
-                                                    new_torrent
-                                                {
-                                                    let peers_line = match (t.num_seeds, t.num_peers) {
-                                                    (None, None) => String::new(),
-                                                    (Some(seeds), Some(peers)) => format!("\n**Peers:** Seeds: `{}` | Peers: `{}`", seeds, peers),
-                                                    (Some(seeds), None) => format!("\n**Peers:** Seeds: `{}`", seeds),
-                                                    (None, Some(peers)) => format!("\n**Peers:** Peers: `{}`", peers),
-                                                };
-                                                    (format!("✅ **Torrent file added successfully!**\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`{}\n**Hash:** `{}`", t.name, convert_size(t.size), t.state, peers_line, t.hash), Some(t.hash.clone()))
-                                                } else {
-                                                    (
-                                                        "✅ Torrent file added successfully!"
-                                                            .to_string(),
-                                                        None,
+                        if is_torrent_url {
+                            // .torrent file: download it and hand the bytes to the torrent client
+                            let filename = link_opt.split('/').next_back().unwrap_or("downloaded.torrent");
+                            match reqwest::get(link_opt).await {
+                                Ok(resp) => {
+                                    match resp.bytes().await {
+                                        Ok(bytes) => {
+                                            match handler
+                                                .manager
+                                                .add_torrent(bytes.to_vec(), filename, None)
+                                                .await
+                                            {
+                                                Ok(true) => {
+                                                    tokio::time::sleep(
+                                                        std::time::Duration::from_millis(500),
                                                     )
-                                                };
-                                                Ok((details_msg, hash_opt))
-                                            }
-                                            Ok(false) => {
-                                                Err("❌ Failed to add torrent file.".to_string())
-                                            }
-                                            Err(e) => {
-                                                if e.contains("409") {
-                                                    Err("⚠️ This torrent/magnet link is already in the download list.".to_string())
-                                                } else {
-                                                    Err(format!("❌ Error: {}", e))
+                                                    .await;
+                                                    let after = handler
+                                                        .manager
+                                                        .get_torrents(None, None)
+                                                        .await
+                                                        .unwrap_or_default();
+                                                    let new_torrent = after.iter().find(|t_after| {
+                                                        !before.iter().any(|t_before| {
+                                                            t_before.hash == t_after.hash
+                                                        })
+                                                    });
+                                                    let (details_msg, hash_opt) = if let Some(t) =
+                                                        new_torrent
+                                                    {
+                                                        let peers_line = match (t.num_seeds, t.num_peers) {
+                                                        (None, None) => String::new(),
+                                                        (Some(seeds), Some(peers)) => format!("\n**Peers:** Seeds: `{}` | Peers: `{}`", seeds, peers),
+                                                        (Some(seeds), None) => format!("\n**Peers:** Seeds: `{}`", seeds),
+                                                        (None, Some(peers)) => format!("\n**Peers:** Peers: `{}`", peers),
+                                                    };
+                                                        (format!("✅ **Torrent file added successfully!**\n\n**Name:** {}\n**Size:** {}\n**Status:** `{}`{}\n**Hash:** `{}`", t.name, convert_size(t.size), t.state, peers_line, t.hash), Some(t.hash.clone()))
+                                                    } else {
+                                                        (
+                                                            "✅ Torrent file added successfully!"
+                                                                .to_string(),
+                                                            None,
+                                                        )
+                                                    };
+                                                    Ok((details_msg, hash_opt))
+                                                }
+                                                Ok(false) => {
+                                                    Err("❌ Failed to add torrent file.".to_string())
+                                                }
+                                                Err(e) => {
+                                                    if e.contains("409") {
+                                                        Err("⚠️ This torrent/magnet link is already in the download list.".to_string())
+                                                    } else {
+                                                        Err(format!("❌ Error: {}", e))
+                                                    }
                                                 }
                                             }
                                         }
+                                        Err(e) => Err(format!("Failed to read URL content: {}", e)),
                                     }
-                                    Err(e) => Err(format!("Failed to read URL content: {}", e)),
                                 }
+                                Err(e) => Err(format!("Failed to download from URL: {}", e)),
                             }
-                            Err(e) => Err(format!("Failed to download from URL: {}", e)),
+                        } else {
+                            // Direct download URL: pass straight to aria2, don't download it ourselves
+                            match handler.manager.add_url(link_opt, None).await {
+                                Ok(_) => {
+                                    // Give aria2 a moment to register the task
+                                    tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+                                    let after = handler
+                                        .manager
+                                        .get_torrents(None, None)
+                                        .await
+                                        .unwrap_or_default();
+                                    let new_task = after.iter().find(|t_after| {
+                                        !before.iter().any(|t_before| t_before.hash == t_after.hash)
+                                    });
+                                    let (details_msg, hash_opt) = if let Some(t) = new_task {
+                                        (
+                                            format!(
+                                                "✅ **Download queued!**\n\n**Name:** {}\n**Status:** `{}`\n**ID:** `{}`",
+                                                t.name, t.state, t.hash
+                                            ),
+                                            Some(t.hash.clone()),
+                                        )
+                                    } else {
+                                        ("✅ Download queued!".to_string(), None)
+                                    };
+                                    Ok((details_msg, hash_opt))
+                                }
+                                Err(e) => Err(format!("❌ Error: {}", e)),
+                            }
                         }
+
                     } else {
                         Err("❌ Invalid link format. Must be a magnet link or http/https torrent URL.".to_string())
                     };

@@ -72,6 +72,23 @@ pub fn get_connection() -> Result<Connection> {
         )",
         [],
     )?;
+    // Batch tracking: groups of downloads queued together (e.g. from a .txt file)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS download_batches (
+            batch_id TEXT PRIMARY KEY,
+            created_at INTEGER NOT NULL,
+            total INTEGER NOT NULL
+        )",
+        [],
+    )?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS batch_items (
+            gid TEXT PRIMARY KEY,
+            batch_id TEXT NOT NULL,
+            completed INTEGER NOT NULL DEFAULT 0
+        )",
+        [],
+    )?;
     Ok(conn)
 }
 
@@ -321,6 +338,94 @@ pub fn prune_expired_local_downloads() -> Result<()> {
         params![now],
     )?;
     Ok(())
+}
+
+/// Creates a new batch record. `total` is the number of items expected.
+pub fn create_batch(batch_id: &str, total: usize) -> Result<()> {
+    let conn = get_connection()?;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+    conn.execute(
+        "INSERT OR REPLACE INTO download_batches (batch_id, created_at, total) VALUES (?, ?, ?)",
+        params![batch_id, now, total as i64],
+    )?;
+    Ok(())
+}
+
+/// Associates an aria2 GID with a batch.
+pub fn add_gid_to_batch(gid: &str, batch_id: &str) -> Result<()> {
+    let conn = get_connection()?;
+    conn.execute(
+        "INSERT OR REPLACE INTO batch_items (gid, batch_id, completed) VALUES (?, ?, 0)",
+        params![gid, batch_id],
+    )?;
+    Ok(())
+}
+
+/// Marks a single GID as complete. Returns the batch_id if one exists.
+pub fn mark_batch_item_complete(gid: &str) -> Result<Option<String>> {
+    let conn = get_connection()?;
+    let rows_changed = conn.execute(
+        "UPDATE batch_items SET completed = 1 WHERE gid = ?",
+        params![gid],
+    )?;
+    if rows_changed == 0 {
+        return Ok(None);
+    }
+    let batch_id: Option<String> = conn
+        .query_row(
+            "SELECT batch_id FROM batch_items WHERE gid = ?",
+            params![gid],
+            |r| r.get(0),
+        )
+        .ok();
+    Ok(batch_id)
+}
+
+/// Returns the batch_id for a GID, if any.
+pub fn get_batch_for_gid(gid: &str) -> Option<String> {
+    let conn = get_connection().ok()?;
+    conn.query_row(
+        "SELECT batch_id FROM batch_items WHERE gid = ?",
+        params![gid],
+        |r| r.get(0),
+    )
+    .ok()
+}
+
+/// Returns true when every item in the batch has completed = 1.
+pub fn is_batch_complete(batch_id: &str) -> bool {
+    let conn = match get_connection() {
+        Ok(c) => c,
+        Err(_) => return false,
+    };
+    let pending: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM batch_items WHERE batch_id = ? AND completed = 0",
+            params![batch_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(1);
+    pending == 0
+}
+
+/// Returns all GIDs belonging to a batch.
+pub fn get_batch_gids(batch_id: &str) -> Vec<String> {
+    let conn = match get_connection() {
+        Ok(c) => c,
+        Err(_) => return vec![],
+    };
+    let mut stmt = match conn.prepare("SELECT gid FROM batch_items WHERE batch_id = ?") {
+        Ok(s) => s,
+        Err(_) => return vec![],
+    };
+    let rows = stmt.query_map(params![batch_id], |r| r.get(0));
+    match rows {
+        Ok(iter) => iter.flatten().collect(),
+        Err(_) => vec![],
+    }
 }
 
 #[cfg(test)]

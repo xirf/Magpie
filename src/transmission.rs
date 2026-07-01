@@ -234,7 +234,7 @@ impl TorrentClient for TransmissionManager {
 
     async fn get_categories(&self) -> Result<Option<Vec<String>>, String> {
         let torrents = self.get_torrents(None, None).await?;
-        let mut cats = std::collections::HashSet::new();
+        let mut cats = std::collections::BTreeSet::new();
         for t in torrents {
             if let Some(cat) = t.category {
                 cats.insert(cat);

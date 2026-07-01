@@ -1,6 +1,6 @@
 use crate::config::Settings;
 use crate::db::{cache_presigned_url, get_cached_presigned_url};
-use rand::Rng;
+
 use s3::bucket::Bucket;
 use s3::creds::Credentials;
 use s3::Region;
@@ -157,13 +157,8 @@ pub async fn get_download_link(
     if content_path_str.is_empty() {
         return Err("Torrent content path is missing.".to_string());
     }
-
     if local_enabled {
-        let token: String = rand::thread_rng()
-            .sample_iter(&rand::distributions::Alphanumeric)
-            .take(32)
-            .map(char::from)
-            .collect();
+        let token = crate::utils::generate_unique_token();
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

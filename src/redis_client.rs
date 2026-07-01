@@ -1,5 +1,5 @@
 use redis::{AsyncCommands, Client};
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

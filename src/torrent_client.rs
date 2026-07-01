@@ -1,3 +1,4 @@
+use crate::aria2::Aria2Manager;
 use crate::config::Settings;
 use crate::qbittorrent::QBittorrentManager;
 use crate::transmission::TransmissionManager;
@@ -68,9 +69,14 @@ pub fn create_client(settings: &Settings) -> Arc<dyn TorrentClient> {
     let user = settings.client.user.clone();
     let pass = settings.client.password.clone();
 
-    if settings.client.r#type == "transmission" {
-        Arc::new(TransmissionManager::new(&host, &user, &pass))
-    } else {
-        Arc::new(QBittorrentManager::new(&host, &user, &pass))
+    match settings.client.r#type.as_str() {
+        "transmission" => Arc::new(TransmissionManager::new(&host, &user, &pass)),
+        "aria2" => Arc::new(Aria2Manager::new(
+            &host,
+            &pass, // 'password' field used as RPC secret token
+            settings.client.split.unwrap_or(5),
+            settings.client.max_concurrent.unwrap_or(5),
+        )),
+        _ => Arc::new(QBittorrentManager::new(&host, &user, &pass)),
     }
 }

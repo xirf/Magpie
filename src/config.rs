@@ -13,6 +13,10 @@ pub struct ClientSettings {
     pub user: String,
     #[serde(default = "default_password")]
     pub password: String,
+    /// aria2 only: number of connections per download (default: 5)
+    pub split: Option<u32>,
+    /// aria2 only: max concurrent downloads (default: 5)
+    pub max_concurrent: Option<u32>,
 }
 
 fn default_client_type() -> String {
@@ -232,6 +236,8 @@ impl Settings {
                 host: "http://localhost:8080".to_string(),
                 user: "admin".to_string(),
                 password: "adminadmin".to_string(),
+                split: None,
+                max_concurrent: None,
             },
             telegram: TelegramSettings {
                 enabled: true,

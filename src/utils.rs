@@ -156,6 +156,28 @@ pub fn percent_encode(input: &str) -> String {
     encoded
 }
 
+
+pub fn generate_unique_token() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let t = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    
+    let time_nanos = t.as_nanos();
+    let addr = &time_nanos as *const _ as usize as u128;
+    let seed = time_nanos ^ addr;
+
+    let mut state = seed;
+    let mut token = String::with_capacity(32);
+    let chars = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for _ in 0..32 {
+        state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        let idx = (state % (chars.len() as u128)) as usize;
+        token.push(chars[idx] as char);
+    }
+    token
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

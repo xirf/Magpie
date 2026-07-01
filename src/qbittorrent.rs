@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use reqwest::header::COOKIE;
 use reqwest::{Client, Response};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

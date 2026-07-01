@@ -151,16 +151,33 @@ pub async fn show_torrent_list(
     // Select menu for torrents
     let mut select_options = Vec::new();
     for t in torrents.iter().take(25) {
-        let label = if t.name.len() > 100 {
-            &t.name[..97]
+        // When aria2 hasn't resolved a name yet it stores the full URL as the name.
+        // Extract just the last path segment so we stay within Discord's 100-char limit.
+        let resolved_name = if t.name.starts_with("http://") || t.name.starts_with("https://") {
+            t.name
+                .split('/')
+                .last()
+                .filter(|s| !s.is_empty())
+                .unwrap_or("Unnamed download")
+                .to_string()
         } else {
-            &t.name
+            t.name.clone()
         };
-        let desc_str = format!("Size: {} | Status: {}", convert_size(t.size), t.state);
-        let desc_slice = if desc_str.len() > 100 {
-            &desc_str[..97]
+
+        // Safe char-boundary truncation — Discord requires 1-100 chars
+        let label: String = if resolved_name.is_empty() {
+            "Unnamed download".to_string()
+        } else if resolved_name.chars().count() > 97 {
+            resolved_name.chars().take(97).collect::<String>() + "..."
         } else {
-            &desc_str
+            resolved_name
+        };
+
+        let desc_str = format!("Size: {} | Status: {}", convert_size(t.size), t.state);
+        let desc_slice: String = if desc_str.chars().count() > 97 {
+            desc_str.chars().take(97).collect::<String>() + "..."
+        } else {
+            desc_str
         };
         select_options.push(CreateSelectMenuOption::new(label, &t.hash).description(desc_slice));
     }

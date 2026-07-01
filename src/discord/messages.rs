@@ -290,7 +290,7 @@ pub async fn handle_message(handler: &Handler, ctx: &Context, msg: Message) {
         return;
     }
 
-    // 2. Check for torrent attachments
+    // 2. Check for torrent attachments or .txt URL list files
     for att in &msg.attachments {
         if att.filename.ends_with(".torrent") {
             let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
@@ -392,5 +392,142 @@ pub async fn handle_message(handler: &Handler, ctx: &Context, msg: Message) {
             }
             return;
         }
+
+        // .txt attachment: treat each non-empty line as a download URL
+        if att.filename.ends_with(".txt") {
+            let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+            match reqwest::get(&att.url).await {
+                Ok(resp) => match resp.text().await {
+                    Ok(text) => {
+                        let urls: Vec<String> = text
+                            .lines()
+                            .map(|l| l.trim().to_string())
+                            .filter(|l| {
+                                l.starts_with("http://") || l.starts_with("https://")
+                                    || l.starts_with("magnet:")
+                            })
+                            .collect();
+
+                        if urls.is_empty() {
+                            let _ = msg.reply(&ctx.http, "⚠️ No valid URLs found in the text file.").await;
+                            return;
+                        }
+
+                        let total = urls.len();
+                        // Create a batch so task checker can wait for ALL files before uploading/notifying
+                        let batch_id = format!("{:x}{:x}", 
+                            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
+                            total);
+                        let _ = crate::db::create_batch(&batch_id, total);
+
+                        let _ = msg
+                            .reply(&ctx.http, format!("⏳ Queuing **{}** download(s) from `{}`…", total, att.filename))
+                            .await;
+
+                        let mut ok = 0usize;
+                        let mut failed = 0usize;
+                        for url in &urls {
+                            let before_gids: std::collections::BTreeSet<String> = handler.manager
+                                .get_torrents(None, None).await.unwrap_or_default()
+                                .into_iter().map(|t| t.hash).collect();
+
+                            let res = if url.starts_with("magnet:") {
+                                handler.manager.add_magnet(url, None).await.map(|_| ())
+                            } else {
+                                handler.manager.add_url(url, None).await.map(|_| ())
+                            };
+                            match res {
+                                Ok(_) => {
+                                    ok += 1;
+                                    // Find the new GID and register it in the batch
+                                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                                    if let Ok(after) = handler.manager.get_torrents(None, None).await {
+                                        for t in after {
+                                            if !before_gids.contains(&t.hash) {
+                                                let _ = crate::db::add_gid_to_batch(&t.hash, &batch_id);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(_) => failed += 1,
+                            }
+                        }
+
+                        let summary = if failed == 0 {
+                            format!("✅ All **{}** download(s) queued successfully!", ok)
+                        } else {
+                            format!("✅ **{}** queued, ❌ **{}** failed.", ok, failed)
+                        };
+                        let _ = msg.reply(&ctx.http, summary).await;
+                    }
+                    Err(e) => {
+                        let _ = msg.reply(&ctx.http, format!("❌ Failed to read text file: {}", e)).await;
+                    }
+                },
+                Err(e) => {
+                    let _ = msg.reply(&ctx.http, format!("❌ Failed to download attachment: {}", e)).await;
+                }
+            }
+            return;
+        }
+    }
+
+    // 3. Check for multiple URLs in message body (one per line)
+    let url_lines: Vec<&str> = msg
+        .content
+        .lines()
+        .map(|l| l.trim())
+        .filter(|l| {
+            (l.starts_with("http://") || l.starts_with("https://"))
+                && !l.starts_with("magnet:")
+        })
+        .collect();
+
+    if url_lines.len() > 1 {
+        let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+        let total = url_lines.len();
+        // Create a batch for this group of URLs
+        let batch_id = format!("{:x}{:x}",
+            std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
+            total);
+        let _ = crate::db::create_batch(&batch_id, total);
+
+        let _ = msg
+            .reply(&ctx.http, format!("⏳ Queuing **{}** download(s)…", total))
+            .await;
+
+        let mut ok = 0usize;
+        let mut failed = 0usize;
+        for url in &url_lines {
+            let before_gids: std::collections::BTreeSet<String> = handler.manager
+                .get_torrents(None, None).await.unwrap_or_default()
+                .into_iter().map(|t| t.hash).collect();
+
+            let res = handler.manager.add_url(url, None).await;
+            match res {
+                Ok(_) => {
+                    ok += 1;
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    if let Ok(after) = handler.manager.get_torrents(None, None).await {
+                        for t in after {
+                            if !before_gids.contains(&t.hash) {
+                                let _ = crate::db::add_gid_to_batch(&t.hash, &batch_id);
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(_) => failed += 1,
+            }
+        }
+
+        let summary = if failed == 0 {
+            format!("✅ All **{}** download(s) queued!", ok)
+        } else {
+            format!("✅ **{}** queued, ❌ **{}** failed.", ok, failed)
+        };
+        let _ = msg.reply(&ctx.http, summary).await;
+        return;
     }
 }

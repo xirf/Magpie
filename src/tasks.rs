@@ -1,6 +1,6 @@
 use serenity::all::UserId;
 use serenity::builder::{CreateActionRow, CreateButton, CreateMessage};
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use teloxide::prelude::*;
@@ -51,6 +51,26 @@ pub async fn torrent_finished(
         let exists_in_sqlite = is_notification_sent(&torrent.hash);
 
         if !exists_in_redis && !exists_in_sqlite {
+            // Mark this item done in its batch (if any) and check whether the whole batch finished
+            let batch_id = crate::db::get_batch_for_gid(&torrent.hash);
+            let _ = crate::db::mark_batch_item_complete(&torrent.hash);
+
+            if let Some(ref bid) = batch_id {
+                if !crate::db::is_batch_complete(bid) {
+                    // Other items in this batch are still downloading — just mark and skip
+                    println!(
+                        "[Tasks] Batch {} not yet complete, deferring notification for {}",
+                        bid, torrent.name
+                    );
+                    // Still mark notification sent so we don't re-process this GID
+                    redis.set(&torrent.hash, "true", Some(10 * 86400)).await;
+                    let _ = mark_notification_sent(&torrent.hash);
+                    continue;
+                }
+                // All batch items are done — fall through to upload + single notification below
+                println!("[Tasks] Batch {} complete, processing now.", bid);
+            }
+
             let mut download_link = String::new();
 
             let has_local_server = settings.local_server.enabled;
@@ -111,8 +131,16 @@ pub async fn torrent_finished(
                 if user.notify {
                     let user_lang = user.locale.as_deref().unwrap_or("en");
 
+                    // For batch completions, summarise the whole batch in one message
+                    let message_name = if let Some(ref bid) = batch_id {
+                        let gids = crate::db::get_batch_gids(bid);
+                        format!("batch of {} files", gids.len())
+                    } else {
+                        escape_markdown(&torrent.name)
+                    };
+
                     let mut vars = HashMap::new();
-                    vars.insert("name".to_string(), escape_markdown(&torrent.name));
+                    vars.insert("name".to_string(), message_name);
                     let mut message = t(
                         "Torrent {name} has finished downloading!",
                         user_lang,

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap as HashMap;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::types::InlineKeyboardMarkup;
