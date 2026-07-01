@@ -154,7 +154,13 @@ impl TorrentClient for Aria2Manager {
         let res = self.request("aria2.unpause", json!([hash])).await;
         let final_res = match res {
             Ok(_) => Ok(()),
-            Err(e) => Err(e),
+            Err(e) => {
+                if e.contains("cannot be unpaused now") {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            }
         };
         println!("[Aria2Manager] resume result: {:?}", final_res);
         final_res
@@ -165,7 +171,13 @@ impl TorrentClient for Aria2Manager {
         let res = self.request("aria2.pause", json!([hash])).await;
         let final_res = match res {
             Ok(_) => Ok(()),
-            Err(e) => Err(e),
+            Err(e) => {
+                if e.contains("cannot be paused now") {
+                    Ok(())
+                } else {
+                    Err(e)
+                }
+            }
         };
         println!("[Aria2Manager] pause result: {:?}", final_res);
         final_res
@@ -240,6 +252,11 @@ impl TorrentClient for Aria2Manager {
                 };
 
                 let s = v["status"].as_str().unwrap_or("unknown");
+                if s == "error" {
+                    let err_code = v["errorCode"].as_str().unwrap_or("unknown");
+                    let err_msg = v["errorMessage"].as_str().unwrap_or("no message");
+                    println!("[Aria2Manager] Task {} failed with errorCode: {}, errorMessage: {}", hash, err_code, err_msg);
+                }
                 let state = match s {
                     "active" => "downloading".to_string(),
                     "waiting" => "queued".to_string(),
@@ -353,6 +370,11 @@ impl TorrentClient for Aria2Manager {
             };
 
             let s = v["status"].as_str().unwrap_or("unknown");
+            if s == "error" {
+                let err_code = v["errorCode"].as_str().unwrap_or("unknown");
+                let err_msg = v["errorMessage"].as_str().unwrap_or("no message");
+                println!("[Aria2Manager] Task {} failed with errorCode: {}, errorMessage: {}", gid, err_code, err_msg);
+            }
             let state = match s {
                 "active" => "downloading".to_string(),
                 "waiting" => "queued".to_string(),
