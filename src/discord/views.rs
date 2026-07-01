@@ -138,9 +138,8 @@ pub async fn show_torrent_list(
         desc.push_str(&format!("Hash: `{}`\n\n", t.hash));
     }
 
-    if desc.len() > 4096 {
-        desc.truncate(4093);
-        desc.push_str("...");
+    if desc.chars().count() > 4096 {
+        desc = desc.chars().take(4093).collect::<String>() + "...";
     }
 
     let embed = serenity::builder::CreateEmbed::new()

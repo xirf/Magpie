@@ -212,7 +212,7 @@ impl TorrentClient for Aria2Manager {
         Ok(())
     }
 
-    async fn get_torrent(&self, hash: &str, _status_filter: Option<&str>) -> Result<Option<Torrent>, String> {
+    async fn get_torrent(&self, hash: &str, status_filter: Option<&str>) -> Result<Option<Torrent>, String> {
         let res = match self.request("aria2.tellStatus", json!([hash])).await {
             Ok(v) => {
                 let name = v["bittorrent"]["info"]["name"]
@@ -250,6 +250,12 @@ impl TorrentClient for Aria2Manager {
                     _ => s.to_string(),
                 };
 
+                if let Some(filter) = status_filter {
+                    if state != filter {
+                        return Ok(None);
+                    }
+                }
+
                 let dir = v["dir"].as_str().unwrap_or("").to_string();
                 let files_arr = v["files"].as_array();
                 let first_file_path = files_arr
@@ -283,7 +289,7 @@ impl TorrentClient for Aria2Manager {
         res
     }
 
-    async fn get_torrents(&self, hash: Option<&str>, _status_filter: Option<&str>) -> Result<Vec<Torrent>, String> {
+    async fn get_torrents(&self, hash: Option<&str>, status_filter: Option<&str>) -> Result<Vec<Torrent>, String> {
         let active = self.request("aria2.tellActive", json!([])).await;
         let waiting = self.request("aria2.tellWaiting", json!([0, 1000])).await;
         let stopped = self.request("aria2.tellStopped", json!([0, 1000])).await;
@@ -356,6 +362,12 @@ impl TorrentClient for Aria2Manager {
                 "removed" => "removed".to_string(),
                 _ => s.to_string(),
             };
+
+            if let Some(filter) = status_filter {
+                if state != filter {
+                    continue;
+                }
+            }
 
             let dir = v["dir"].as_str().unwrap_or("").to_string();
             let files_arr = v["files"].as_array();
