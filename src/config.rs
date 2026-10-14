@@ -222,6 +222,8 @@ pub struct Settings {
     pub seed_after_download: String,
     #[serde(default = "default_notification_settings")]
     pub notifications: NotificationSettings,
+    #[serde(default)]
+    pub coding: crate::coding::CodingSettings,
 }
 
 fn default_seed_after_download() -> String {
@@ -279,6 +281,7 @@ impl Settings {
                 progress_report_interval: 10,
                 min_size_gb: 1.0,
             },
+            coding: crate::coding::CodingSettings::default(),
         }
     }
 
@@ -347,3 +350,4 @@ impl Settings {
         )
     }
 }
+

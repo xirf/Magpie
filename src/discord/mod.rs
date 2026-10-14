@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub mod commands;
+pub mod coding;
 pub mod components;
 pub mod messages;
 pub mod state;
@@ -21,10 +22,21 @@ pub use state::Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        commands::register_commands(&ctx, &ready).await;
+        let project_aliases = self.coding.as_ref()
+            .map(|service| service.config.projects.keys().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        commands::register_commands(&ctx, &ready, &project_aliases).await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        // Coding must never use the torrent bot's automatic first-administrator enrollment.
+        if let Interaction::Command(ref cmd) = interaction {
+            if cmd.data.name == "code" {
+                let settings = self.settings.read().await.clone();
+                coding::handle(self, &ctx, cmd, &settings).await;
+                return;
+            }
+        }
         let discord_id = match &interaction {
             Interaction::Command(cmd) => cmd.user.id.to_string(),
             Interaction::Component(comp) => comp.user.id.to_string(),
@@ -38,7 +50,8 @@ impl EventHandler for Handler {
         let has_admin = settings.users.iter().any(|u| {
             u.role == "administrator" && u.discord_id.as_deref().unwrap_or("") != "9876543210123"
         });
-        if !has_admin {
+        // Shell access must not become available through the torrent bot's bootstrap enrollment.
+        if !has_admin && !settings.coding.enabled {
             user.role = "administrator".to_string();
             user.discord_id = Some(discord_id.clone());
             {
@@ -143,12 +156,24 @@ pub async fn start_discord_bot(
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
-    let handler = Handler { settings, manager };
+    let coding = {
+        let s = settings.read().await;
+        if s.coding.enabled {
+            Some(crate::coding::Service::new(s.coding.clone())?)
+        } else {
+            None
+        }
+    };
+    let handler = Handler { settings: settings.clone(), manager, coding: coding.clone() };
 
     let client = Client::builder(&token, intents)
         .event_handler(handler)
         .await
         .map_err(|e| e.to_string())?;
 
+    if let Some(coding) = coding {
+        coding.start(client.http.clone(), settings);
+    }
     Ok(client)
 }
+

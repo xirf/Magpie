@@ -2,6 +2,7 @@
 //! Shared by the magpie daemon binary and the magpie-cli utility binary.
 pub mod aria2;
 pub mod config;
+pub mod coding;
 pub mod db;
 pub mod discord;
 pub mod i18n;
