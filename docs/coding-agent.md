@@ -17,6 +17,7 @@ branch head, verifies checksums, and downloads Magpie and pinned Zot executables
 directly onto the SD card. It refuses root-filesystem destinations and replacement
 while either Magpie service is active. It does not compile or start services.
 Run it as the intended service user, or explicitly adjust ownership afterward.
+After merging the feature branch, select mainline builds with `MAGPIE_REF=master`.
 
 The GitHub Actions workflow builds/tests remotely and uploads ARM64 and AMD64
 runtime artifacts. Download `magpie-linux-arm64`, verify its included SHA-256

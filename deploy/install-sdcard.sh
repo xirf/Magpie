@@ -5,7 +5,12 @@ set -euo pipefail
 install_root=${1:-/home/rustfs_user/rustfs_data/magpie}
 zot_version=${ZOT_VERSION:-0.4.21}
 repository=xirf/magpie
-branch=feature/discord-coding-agent
+branch=${MAGPIE_REF:-feature/discord-coding-agent}
+if [[ ! $branch =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+  echo "Invalid MAGPIE_REF branch name" >&2
+  exit 1
+fi
+encoded_branch=${branch//\//%2F}
 
 for tool in gh git sha256sum tar install realpath stat; do
   command -v "$tool" >/dev/null || { echo "Missing required tool: $tool" >&2; exit 1; }
@@ -41,8 +46,8 @@ mkdir -p "$install_root/bin" "$install_root/data/tmp" "$install_root/data/cache"
 staging=$(mktemp -d "$install_root/data/tmp/install.XXXXXX")
 trap 'rm -rf -- "$staging"' EXIT
 
-head_sha=$(gh api "repos/$repository/commits/feature%2Fdiscord-coding-agent" --jq '.sha')
-run_id=$(gh api "repos/$repository/actions/runs?branch=feature%2Fdiscord-coding-agent&head_sha=$head_sha&status=success&per_page=1" \
+head_sha=$(gh api "repos/$repository/commits/$encoded_branch" --jq '.sha')
+run_id=$(gh api "repos/$repository/actions/runs?branch=$encoded_branch&head_sha=$head_sha&status=success&per_page=1" \
   --jq '.workflow_runs[0].id // empty')
 if [[ -z $run_id ]]; then
   echo "No successful build exists for the current feature branch. Wait for CI." >&2

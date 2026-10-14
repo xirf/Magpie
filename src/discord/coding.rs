@@ -1,5 +1,7 @@
-use serenity::builder::{CreateCommand, CreateCommandOption, CreateInteractionResponse,
-    CreateInteractionResponseMessage, EditInteractionResponse};
+use serenity::builder::{
+    CreateCommand, CreateCommandOption, CreateInteractionResponse,
+    CreateInteractionResponseMessage, EditInteractionResponse,
+};
 use serenity::model::application::{CommandDataOptionValue, CommandInteraction, CommandOptionType};
 use serenity::prelude::Context;
 
@@ -7,35 +9,84 @@ use super::state::Handler;
 use crate::config::Settings;
 
 pub fn command() -> CreateCommand {
-    CreateCommand::new("code").description("Queue and manage coding tasks (configured administrators only)")
-        .add_option(CreateCommandOption::new(CommandOptionType::String,"action","Operation")
-            .required(true).add_string_choice("Task","task")
-            .add_string_choice("Status","status").add_string_choice("Cancel","cancel"))
-        .add_option(CreateCommandOption::new(CommandOptionType::String,"project","Configured project alias"))
-        .add_option(CreateCommandOption::new(CommandOptionType::String,"task","What the coding agent should implement").max_length(6000))
-        .add_option(CreateCommandOption::new(CommandOptionType::Integer,"id","Task ID").min_int_value(1))
+    CreateCommand::new("code")
+        .description("Queue and manage coding tasks (configured administrators only)")
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::String, "action", "Operation")
+                .required(true)
+                .add_string_choice("Task", "task")
+                .add_string_choice("Status", "status")
+                .add_string_choice("Cancel", "cancel"),
+        )
+        .add_option(CreateCommandOption::new(
+            CommandOptionType::String,
+            "project",
+            "Configured project alias",
+        ))
+        .add_option(
+            CreateCommandOption::new(
+                CommandOptionType::String,
+                "task",
+                "What the coding agent should implement",
+            )
+            .max_length(6000),
+        )
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::Integer, "id", "Task ID").min_int_value(1),
+        )
 }
 
-pub async fn handle(handler: &Handler, ctx: &Context, cmd: &CommandInteraction, settings: &Settings) {
+pub async fn handle(
+    handler: &Handler,
+    ctx: &Context,
+    cmd: &CommandInteraction,
+    settings: &Settings,
+) {
     let user = cmd.user.id.to_string();
     let channel = cmd.channel_id.to_string();
-    if !crate::coding::authorized(settings,&user,&channel) {
+    if !crate::coding::authorized(settings, &user, &channel) {
         let _ = cmd.create_response(&ctx.http,CreateInteractionResponse::Message(
             CreateInteractionResponseMessage::new().content("Coding requires an explicitly configured administrator and allowed channel.")
                 .ephemeral(true))).await;
         return;
     }
     let Some(service) = handler.coding.as_ref() else {
-        let _ = cmd.create_response(&ctx.http,CreateInteractionResponse::Message(
-            CreateInteractionResponseMessage::new().content("Coding is unavailable. Check server configuration and restart Magpie.")
-                .ephemeral(true))).await;
+        let _ = cmd
+            .create_response(
+                &ctx.http,
+                CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new()
+                        .content(
+                            "Coding is unavailable. Check server configuration and restart Magpie.",
+                        )
+                        .ephemeral(true),
+                ),
+            )
+            .await;
         return;
     };
-    if cmd.defer_ephemeral(&ctx.http).await.is_err() { return; }
-    let string = |name: &str| cmd.data.options.iter().find(|o|o.name == name).and_then(|o|o.value.as_str());
-    let id = cmd.data.options.iter().find(|o|o.name == "id").and_then(|o| {
-        if let CommandDataOptionValue::Integer(id) = &o.value { Some(*id) } else { None }
-    });
+    if cmd.defer_ephemeral(&ctx.http).await.is_err() {
+        return;
+    }
+    let string = |name: &str| {
+        cmd.data
+            .options
+            .iter()
+            .find(|o| o.name == name)
+            .and_then(|o| o.value.as_str())
+    };
+    let id = cmd
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "id")
+        .and_then(|o| {
+            if let CommandDataOptionValue::Integer(id) = &o.value {
+                Some(*id)
+            } else {
+                None
+            }
+        });
     let result: Result<String,String> = match string("action") {
         Some("task") => {
             match (string("project"),string("task")) {
@@ -67,7 +118,11 @@ pub async fn handle(handler: &Handler, ctx: &Context, cmd: &CommandInteraction, 
         }
         _ => Err("Choose task, status, or cancel.".into()),
     };
-    let text = result.unwrap_or_else(|error|error);
-    let _ = cmd.edit_response(&ctx.http,EditInteractionResponse::new()
-        .content(text.chars().take(1900).collect::<String>())).await;
+    let text = result.unwrap_or_else(|error| error);
+    let _ = cmd
+        .edit_response(
+            &ctx.http,
+            EditInteractionResponse::new().content(text.chars().take(1900).collect::<String>()),
+        )
+        .await;
 }

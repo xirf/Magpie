@@ -21,20 +21,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Compile both binaries
         run: cargo build --locked --bins
       - name: Test coding authorization, queue, framing, and cancellation
         run: 'cargo test --locked --lib coding:: -- --test-threads=1'
-      - name: Prepare formatting patch
-        run: |
-          rustfmt --edition 2021 src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
-          git diff -- src/coding src/discord/coding.rs > formatting.patch
-          cat formatting.patch
-      - uses: actions/upload-artifact@v4
-        with:
-          name: formatting-patch
-          path: formatting.patch
+      - name: Check existing offline tests for regressions
+        run: cargo test --locked --lib -- --test-threads=1
+      - name: Check coding source formatting
+        run: rustfmt --edition 2021 --check src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
 
   binary:
     needs: test
