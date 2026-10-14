@@ -21,7 +21,7 @@ jobs:
       - name: Compile both binaries
         run: cargo build --locked --bins
       - name: Test coding authorization, queue, framing, and cancellation
-        run: cargo test --locked --lib coding:: -- --test-threads=1
+        run: 'cargo test --locked --lib coding:: -- --test-threads=1'
       - name: Prepare formatting patch
         run: |
           rustfmt --edition 2021 src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
