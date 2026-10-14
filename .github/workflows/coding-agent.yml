@@ -2,12 +2,16 @@ name: Coding agent checks and binaries
 
 on:
   push:
-    branches: [master, 'feature/**']
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: coding-agent-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -15,7 +19,7 @@ jobs:
     env:
       CARGO_BUILD_JOBS: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Compile both binaries
@@ -26,6 +30,7 @@ jobs:
         run: |
           rustfmt --edition 2021 src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
           git diff -- src/coding src/discord/coding.rs > formatting.patch
+          cat formatting.patch
       - uses: actions/upload-artifact@v4
         with:
           name: formatting-patch
@@ -44,7 +49,7 @@ jobs:
     env:
       CARGO_BUILD_JOBS: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked --bins

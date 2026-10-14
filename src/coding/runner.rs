@@ -157,9 +157,11 @@ pub(super) async fn run(service: &Service, job: &Job, mut receiver: watch::Recei
             let kind = event["type"].as_str().unwrap_or("unknown");
             // Store metadata only: never copy model text, credentials, or shell output to Discord/logs.
             if matches!(kind,"turn_start"|"tool_call"|"tool_result"|"usage"|"turn_end"|"done") {
-                let entry = json!({"type":kind,"step":event.get("step"),
+                let entry = json!({"type":kind,"step":event.get("step").and_then(|v|v.as_u64()),
                     "tool":event.get("name").and_then(|v|v.as_str()).map(|s|s.chars().take(64).collect::<String>()),
-                    "input":event.get("input"),"output":event.get("output"),"stop":event.get("stop")});
+                    "input":event.get("input").and_then(|v|v.as_u64()),
+                    "output":event.get("output").and_then(|v|v.as_u64()),
+                    "stop":event.get("stop").and_then(|v|v.as_str()).map(|s|s.chars().take(64).collect::<String>())});
                 writeln!(log,"{entry}").map_err(|_| "Cannot write task log")?;
             }
             match kind {
@@ -184,7 +186,7 @@ pub(super) async fn run(service: &Service, job: &Job, mut receiver: watch::Recei
         if !status.success() { return Err("Zot exited unsuccessfully".into()); }
         Ok(())
     };
-    let result = tokio::select! {
+    let result: Result<(), String> = tokio::select! {
         result = future => result,
         _ = cancelled(&mut receiver) => Err("Task cancelled".into()),
         _ = tokio::time::sleep_until(deadline) => Err("Task deadline exceeded".into()),
