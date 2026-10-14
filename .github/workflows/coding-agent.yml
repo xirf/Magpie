@@ -32,6 +32,17 @@ jobs:
         run: cargo test --locked --features test-mocks --lib -- --test-threads=1
       - name: Check coding source formatting
         run: rustfmt --edition 2021 --check src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
+      - name: Verify pinned Zot RPC against a local API fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir zot-fixture
+          gh release download v0.4.21 --repo patriceckhart/zot --pattern zot_0.4.21_linux_amd64.tar.gz --pattern checksums.txt --dir zot-fixture
+          cd zot-fixture
+          sha256sum --check --ignore-missing checksums.txt
+          tar -xzf zot_0.4.21_linux_amd64.tar.gz zot
+          cd ..
+          python3 deploy/check-zot-rpc.py zot-fixture/zot
 
   binary:
     needs: test
