@@ -6,6 +6,18 @@ configuration files remain supported.
 
 ## SD-card deployment
 
+Once CI succeeds, run the installer from a checkout on the SD card:
+
+```bash
+bash deploy/install-sdcard.sh /home/rustfs_user/rustfs_data/magpie
+```
+
+It requires authenticated `gh`, selects a successful build of the exact feature
+branch head, verifies checksums, and downloads Magpie and pinned Zot executables
+directly onto the SD card. It refuses root-filesystem destinations and replacement
+while either Magpie service is active. It does not compile or start services.
+Run it as the intended service user, or explicitly adjust ownership afterward.
+
 The GitHub Actions workflow builds/tests remotely and uploads ARM64 and AMD64
 runtime artifacts. Download `magpie-linux-arm64`, verify its included SHA-256
 checksum, and extract into `/home/rustfs_user/rustfs_data/magpie/bin/`.
@@ -48,7 +60,7 @@ coding:
   model: deepseek-flash
   base_url: https://api.deepseek.com/v1
   allowed_channels:
-    - "YOUR_DISCORD_CHANNEL_ID"
+    - "1559781266382000210"
   max_steps: 40
   timeout_seconds: 1800
   max_tokens: 200000
