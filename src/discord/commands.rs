@@ -15,7 +15,7 @@ use super::views;
 use crate::config::{Settings, UserSettings};
 use crate::utils::{convert_size, extract_hash_from_magnet, read_cpu_temp};
 
-pub async fn register_commands(ctx: &Context, ready: &Ready) {
+pub async fn register_commands(ctx: &Context, ready: &Ready, project_aliases: &[String]) {
     println!("Discord bot is online! Logged in as {}", ready.user.name);
 
     let guilds = &ready.guilds;
@@ -75,7 +75,7 @@ pub async fn register_commands(ctx: &Context, ready: &Ready) {
             .set_commands(
                 &ctx.http,
                 vec![
-                    super::coding::command(),
+                    super::coding::command(project_aliases),
                     list_cmd.clone(),
                     stats_cmd.clone(),
                     speedlimit_cmd.clone(),

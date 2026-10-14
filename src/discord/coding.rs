@@ -8,7 +8,19 @@ use serenity::prelude::Context;
 use super::state::Handler;
 use crate::config::Settings;
 
-pub fn command() -> CreateCommand {
+pub fn command(project_aliases: &[String]) -> CreateCommand {
+    let mut project_option = CreateCommandOption::new(
+        CommandOptionType::String,
+        "project",
+        "Select a configured project",
+    );
+    if project_aliases.len() <= 25 {
+        for alias in project_aliases {
+            if !alias.is_empty() && alias.chars().count() <= 100 {
+                project_option = project_option.add_string_choice(alias.as_str(), alias.as_str());
+            }
+        }
+    }
     CreateCommand::new("code")
         .description("Queue and manage coding tasks (configured administrators only)")
         .add_option(
@@ -18,11 +30,7 @@ pub fn command() -> CreateCommand {
                 .add_string_choice("Status", "status")
                 .add_string_choice("Cancel", "cancel"),
         )
-        .add_option(CreateCommandOption::new(
-            CommandOptionType::String,
-            "project",
-            "Configured project alias",
-        ))
+        .add_option(project_option)
         .add_option(
             CreateCommandOption::new(
                 CommandOptionType::String,
@@ -96,7 +104,13 @@ pub async fn handle(
                         .map(|id|format!("Queued coding task #{id}. Use `/code action:status id:{id}` to follow it."))
                         .map_err(|_| "Cannot enqueue task; check queue capacity and disk availability".into())
                 }
-                _ => Err("Provide a configured project alias and a non-empty task (maximum 6000 characters).".into()),
+                (Some(project), _) if !service.config.projects.contains_key(project) => {
+                    Err(format!("Unknown project `{project}`. Select one of: {}. The project field is an existing alias, not a new project name.",
+                        service.config.projects.keys().cloned().collect::<Vec<_>>().join(", ")))
+                }
+                (None, _) => Err(format!("Select a project: {}.",
+                    service.config.projects.keys().cloned().collect::<Vec<_>>().join(", "))),
+                _ => Err("Provide a non-empty task description (maximum 6000 characters). The id option is only needed for status or cancel.".into()),
             }
         }
         Some("status") => {

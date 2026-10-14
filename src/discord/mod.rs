@@ -22,7 +22,10 @@ pub use state::Handler;
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
-        commands::register_commands(&ctx, &ready).await;
+        let project_aliases = self.coding.as_ref()
+            .map(|service| service.config.projects.keys().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+        commands::register_commands(&ctx, &ready, &project_aliases).await;
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
