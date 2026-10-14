@@ -1,3 +1,17 @@
+# Optional coding worker. See docs/coding-agent.md for SD-card setup.
+coding:
+  enabled: false
+  zot_binary: zot
+  state_dir: data/coding
+  api_key_env: DEEPSEEK_API_KEY
+  model: deepseek-flash
+  base_url: https://api.deepseek.com/v1
+  allowed_channels: []
+  projects: {}
+  max_steps: 40
+  timeout_seconds: 1800
+  max_tokens: 200000
+
 client:
   type: qbittorrent
   host: http://localhost:8080/
@@ -47,3 +61,4 @@ users:
   #   notify: true                   # Receive DM notification when torrent finishes downloading
   #   locale: en                     # User language: en, es, it, pt, ru, uk
   #   notification_filter: []        # Limit notifications to specific qBittorrent categories
+

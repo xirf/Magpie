@@ -1,0 +1,27 @@
+[Unit]
+Description=Magpie torrent bot and Discord coding queue
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/home/rustfs_user/rustfs_data
+
+[Service]
+Type=simple
+User=rustfs_user
+WorkingDirectory=/home/rustfs_user/rustfs_data/magpie
+ExecStart=/home/rustfs_user/rustfs_data/magpie/bin/magpie
+EnvironmentFile=/home/rustfs_user/rustfs_data/magpie/data/runtime.env
+Environment=TMPDIR=/home/rustfs_user/rustfs_data/magpie/data/tmp
+Environment=XDG_CACHE_HOME=/home/rustfs_user/rustfs_data/magpie/data/cache
+Environment=CARGO_HOME=/home/rustfs_user/rustfs_data/magpie/data/cargo
+Environment=RUSTUP_HOME=/home/rustfs_user/rustfs_data/magpie/data/rustup
+Environment=GOCACHE=/home/rustfs_user/rustfs_data/magpie/data/go-build
+Environment=GOMODCACHE=/home/rustfs_user/rustfs_data/magpie/data/go-mod
+Environment=DATABASE_PATH=/home/rustfs_user/rustfs_data/magpie/data/magpie.db
+Restart=on-failure
+RestartSec=5
+KillMode=control-group
+TimeoutStopSec=15
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

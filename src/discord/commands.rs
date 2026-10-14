@@ -75,6 +75,7 @@ pub async fn register_commands(ctx: &Context, ready: &Ready) {
             .set_commands(
                 &ctx.http,
                 vec![
+                    super::coding::command(),
                     list_cmd.clone(),
                     stats_cmd.clone(),
                     speedlimit_cmd.clone(),
@@ -789,3 +790,4 @@ pub async fn handle_command(
         _ => {}
     }
 }
+

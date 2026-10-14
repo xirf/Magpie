@@ -1,5 +1,9 @@
 # Magpie 🐦‍⬛
 
+Optional Discord coding tasks using Zot and DeepSeek are documented in
+[docs/coding-agent.md](docs/coding-agent.md), including SD-card deployment and
+GitHub Actions ARM64 builds.
+
 Magpie is a modular, performant chatbot that allows you to control your torrent client directly through **Telegram** and/or **Discord**. Optimized specifically for low-resource ARM boards (Set-Top Boxes, Raspberry Pi, Orange Pi, etc.).
 
 Magpie supports **qBittorrent** (Web API), **Transmission** (JSON-RPC daemon), and **Aria2** (JSON-RPC) out of the box.
@@ -138,3 +142,4 @@ This software is provided for educational and administrative purposes only. The 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+

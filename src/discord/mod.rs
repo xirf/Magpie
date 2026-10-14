@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub mod commands;
+pub mod coding;
 pub mod components;
 pub mod messages;
 pub mod state;
@@ -25,6 +26,14 @@ impl EventHandler for Handler {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        // Coding must never use the torrent bot's automatic first-administrator enrollment.
+        if let Interaction::Command(ref cmd) = interaction {
+            if cmd.data.name == "code" {
+                let settings = self.settings.read().await.clone();
+                coding::handle(self, &ctx, cmd, &settings).await;
+                return;
+            }
+        }
         let discord_id = match &interaction {
             Interaction::Command(cmd) => cmd.user.id.to_string(),
             Interaction::Component(comp) => comp.user.id.to_string(),
@@ -143,12 +152,24 @@ pub async fn start_discord_bot(
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT;
 
-    let handler = Handler { settings, manager };
+    let coding = {
+        let s = settings.read().await;
+        if s.coding.enabled {
+            Some(crate::coding::Service::new(s.coding.clone())?)
+        } else {
+            None
+        }
+    };
+    let handler = Handler { settings: settings.clone(), manager, coding: coding.clone() };
 
     let client = Client::builder(&token, intents)
         .event_handler(handler)
         .await
         .map_err(|e| e.to_string())?;
 
+    if let Some(coding) = coding {
+        coding.start(client.http.clone(), settings);
+    }
     Ok(client)
 }
+

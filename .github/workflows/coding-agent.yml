@@ -1,0 +1,62 @@
+name: Coding agent checks and binaries
+
+on:
+  push:
+    branches: [master, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Compile both binaries
+        run: cargo build --locked --bins
+      - name: Test coding authorization, queue, framing, and cancellation
+        run: cargo test --locked --lib coding:: -- --test-threads=1
+      - name: Prepare formatting patch
+        run: |
+          rustfmt --edition 2021 src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
+          git diff -- src/coding src/discord/coding.rs > formatting.patch
+      - uses: actions/upload-artifact@v4
+        with:
+          name: formatting-patch
+          path: formatting.patch
+
+  binary:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+          - runner: ubuntu-24.04
+            arch: amd64
+    runs-on: ${{ matrix.runner }}
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked --bins
+      - name: Package runtime binaries
+        run: |
+          mkdir -p package
+          cp target/release/magpie target/release/magpie-cli package/
+          tar -C package -czf magpie-linux-${{ matrix.arch }}.tar.gz magpie magpie-cli
+          sha256sum magpie-linux-${{ matrix.arch }}.tar.gz > magpie-linux-${{ matrix.arch }}.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: magpie-linux-${{ matrix.arch }}
+          path: |
+            magpie-linux-${{ matrix.arch }}.tar.gz
+            magpie-linux-${{ matrix.arch }}.tar.gz.sha256

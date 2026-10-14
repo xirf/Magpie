@@ -36,6 +36,15 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Local configuration
 data/config.yml
 data/*.db
+data/runtime.env
+data/coding/
+data/tmp/
+data/cache/
+data/cargo/
+data/rustup/
+data/go-build/
+data/go-mod/
+bin/
 
 # Rust target directories and artifacts
 target/
@@ -43,4 +52,5 @@ magpie
 magpie.exe
 magpie-aarch64
 **/*.rs.bk
+
 

@@ -9,6 +9,7 @@ use crate::torrent_client::TorrentClient;
 pub struct Handler {
     pub settings: Arc<RwLock<Settings>>,
     pub manager: Arc<dyn TorrentClient>,
+    pub coding: Option<Arc<crate::coding::Service>>,
 }
 
 pub(crate) fn translate(
@@ -42,3 +43,4 @@ pub(crate) fn get_resolved_user(settings: &Settings, discord_id: &str) -> UserSe
             notification_filter: vec![],
         })
 }
+
