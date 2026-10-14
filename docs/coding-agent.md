@@ -73,7 +73,9 @@ coding:
 
 Coding requires an explicitly configured administrator and allowed channel; it
 does not use automatic first-admin enrollment, fallback Telegram identities, or
-reader/manager roles. Use a private allowed channel: lifecycle notifications are
+reader/manager roles. Enabling coding also disables the torrent bot's automatic
+first-admin enrollment; configure an administrator before enabling it.
+Use a private allowed channel: lifecycle notifications are
 posted there. Restart for coding configuration changes. Authorization is checked
 both when accepting a command and before executing queued work.
 

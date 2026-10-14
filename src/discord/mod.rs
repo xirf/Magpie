@@ -47,7 +47,8 @@ impl EventHandler for Handler {
         let has_admin = settings.users.iter().any(|u| {
             u.role == "administrator" && u.discord_id.as_deref().unwrap_or("") != "9876543210123"
         });
-        if !has_admin {
+        // Shell access must not become available through the torrent bot's bootstrap enrollment.
+        if !has_admin && !settings.coding.enabled {
             user.role = "administrator".to_string();
             user.discord_id = Some(discord_id.clone());
             {
