@@ -65,6 +65,10 @@ pub trait TorrentClient: Send + Sync {
 }
 
 pub fn create_client(settings: &Settings) -> Arc<dyn TorrentClient> {
+    #[cfg(feature = "test-mocks")]
+    if std::env::var("MAGPIE_MOCK").as_deref() == Ok("1") {
+        return Arc::new(crate::mock_client::MockTorrentClient::new());
+    }
     let host = settings.client.host.clone();
     let user = settings.client.user.clone();
     let pass = settings.client.password.clone();
@@ -80,3 +84,4 @@ pub fn create_client(settings: &Settings) -> Arc<dyn TorrentClient> {
         _ => Arc::new(QBittorrentManager::new(&host, &user, &pass)),
     }
 }
+

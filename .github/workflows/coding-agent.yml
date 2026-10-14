@@ -25,11 +25,11 @@ jobs:
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Compile both binaries
-        run: cargo build --locked --bins
+        run: cargo build --locked --features test-mocks --bins
       - name: Test coding authorization, queue, framing, and cancellation
-        run: 'cargo test --locked --lib coding:: -- --test-threads=1'
+        run: 'cargo test --locked --features test-mocks --lib coding:: -- --test-threads=1'
       - name: Check existing offline tests for regressions
-        run: cargo test --locked --lib -- --test-threads=1
+        run: cargo test --locked --features test-mocks --lib -- --test-threads=1
       - name: Check coding source formatting
         run: rustfmt --edition 2021 --check src/coding/mod.rs src/coding/store.rs src/coding/runner.rs src/discord/coding.rs
 

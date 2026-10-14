@@ -124,3 +124,7 @@ CI builds both binaries and tests coding-specific behavior without real Discord
 or DeepSeek keys. Live DeepSeek compatibility, Discord command registration,
 memory measurements, and deployment still need a device smoke test before
 unattended operation.
+
+The existing offline CLI tests require the `test-mocks` feature on both the CLI
+binary and test build. It enables their explicit `MAGPIE_MOCK=1` fixture hook.
+Runtime release artifacts are compiled without this feature.
