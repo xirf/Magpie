@@ -1,0 +1,16 @@
+# Copy to mornye.toml. Relative paths are resolved from the launch directory.
+state_dir = ".mornye"
+workspace = "."
+api_base = "https://api.deepseek.com"
+api_key_env = "DEEPSEEK_API_KEY"
+model = "deepseek-flash"
+max_steps = 16
+max_context_bytes = 96000
+max_output_tokens = 4096
+command_timeout_secs = 120
+
+# Required for `mornye serve`. Default: owner DMs only.
+# discord_user_id = 123456789
+# Optional: restrict all messages to this exact channel instead of DMs.
+# discord_channel_id = 123456789
+# Set DISCORD_BOT_TOKEN in the environment, never in this file.

@@ -1,0 +1,27 @@
+[Unit]
+Description=Mornye Discord assistant with Wuthering Waves inspired profile
+Wants=network-online.target
+After=network-online.target
+RequiresMountsFor=/home/rustfs_user/rustfs_data
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/rustfs_user/rustfs_data/mornye/workspace-discord-persona
+EnvironmentFile=/home/rustfs_user/rustfs_data/mornye/secrets.env
+Environment=TMPDIR=/home/rustfs_user/rustfs_data/mornye/tmp
+ExecStart=/home/rustfs_user/rustfs_data/mornye/bin/mornye-discord-persona-20261017 --config /home/rustfs_user/rustfs_data/mornye/mornye-discord-persona.toml serve
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+MemoryAccounting=true
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,116 @@
+{
+  "src/agent.rs": {
+    "mtime": 1792234618.7971704,
+    "seen": 1792234635.5104344,
+    "ast_hash": "fbf44cf300ab854bf2411a3efb7b1ff2",
+    "semantic_hash": ""
+  },
+  "src/config.rs": {
+    "mtime": 1792177780.6141548,
+    "seen": 1792177968.9313326,
+    "ast_hash": "285d17e8440d263e6b6276cbbe30c2b5",
+    "semantic_hash": ""
+  },
+  "src/graph.rs": {
+    "mtime": 1792177911.8526862,
+    "seen": 1792177968.9313354,
+    "ast_hash": "d1594466536fa667805890f63d53f200",
+    "semantic_hash": ""
+  },
+  "src/main.rs": {
+    "mtime": 1792177900.7425306,
+    "seen": 1792177968.9313364,
+    "ast_hash": "6618d30d2dd43e042a75f700f781b4c9",
+    "semantic_hash": ""
+  },
+  "src/provider.rs": {
+    "mtime": 1792177021.6668174,
+    "seen": 1792177578.147692,
+    "ast_hash": "ebe1412a4a38ae374e159e6f41b12177",
+    "semantic_hash": "ebe1412a4a38ae374e159e6f41b12177"
+  },
+  "src/store.rs": {
+    "mtime": 1792225236.4540386,
+    "seen": 1792225247.3367772,
+    "ast_hash": "c2c8b7b3213a9edc27a4fa23c63fbe02",
+    "semantic_hash": ""
+  },
+  "src/telegram.rs": {
+    "mtime": 1792176971.2596843,
+    "seen": 1792177578.147694,
+    "ast_hash": "113cb3653ae11fd374fb76c6dd893f69",
+    "semantic_hash": "113cb3653ae11fd374fb76c6dd893f69"
+  },
+  "src/tests.rs": {
+    "mtime": 1792234618.8147402,
+    "seen": 1792234635.5104434,
+    "ast_hash": "1a7daa38178d6aa21bcdecb62ed45ff5",
+    "semantic_hash": ""
+  },
+  "src/tools.rs": {
+    "mtime": 1792177901.0473301,
+    "seen": 1792177968.9313426,
+    "ast_hash": "6aa79f5b8faa3409543b1ce6b507b505",
+    "semantic_hash": ""
+  },
+  ".codex/hooks.json": {
+    "mtime": 1792177509.1342463,
+    "seen": 1792177968.9313228,
+    "ast_hash": "5ebef3dd159986e465ab65e4014107ec",
+    "semantic_hash": ""
+  },
+  "Cargo.toml": {
+    "mtime": 1792177780.6131535,
+    "seen": 1792177968.9313266,
+    "ast_hash": "88161d02767b3439e516e99957d1a11b",
+    "semantic_hash": ""
+  },
+  "src/discord.rs": {
+    "mtime": 1792178041.4507284,
+    "seen": 1792178060.8049057,
+    "ast_hash": "e4b779d10f6c9793b075d193a1dfc8d9",
+    "semantic_hash": ""
+  },
+  ".github/workflows/check.yml": {
+    "mtime": 1792176932.232717,
+    "seen": 1792177968.9313436,
+    "ast_hash": "4bdd6907e2eb6fb0da86e513241fea58",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1792177509.133246,
+    "seen": 1792177968.9313447,
+    "ast_hash": "21ceb6533048be51308e69e7b74a35cf",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1792234634.052623,
+    "seen": 1792234635.5104482,
+    "ast_hash": "80def3bf9a22c9549fdd232cfd6e1699",
+    "semantic_hash": ""
+  },
+  "docs/research-and-design.md": {
+    "mtime": 1792177430.417654,
+    "seen": 1792177968.9313462,
+    "ast_hash": "237cb86c05fb9673317b6c657889652f",
+    "semantic_hash": ""
+  },
+  "docs/validation-armbian.md": {
+    "mtime": 1792225516.4905207,
+    "seen": 1792225592.1341662,
+    "ast_hash": "b0936f05d602add262f8be75e9fedd68",
+    "semantic_hash": ""
+  },
+  "docs/upstream-audit.md": {
+    "mtime": 1792225258.9669065,
+    "seen": 1792225261.6896908,
+    "ast_hash": "73f42b522ea49126485fdab3e28ac39d",
+    "semantic_hash": ""
+  },
+  "docs/mornye-character-profile.md": {
+    "mtime": 1792234613.8052244,
+    "seen": 1792234635.5104494,
+    "ast_hash": "ca67df5948c3fed6d1a2b556d724f49c",
+    "semantic_hash": ""
+  }
+}

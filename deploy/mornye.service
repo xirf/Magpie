@@ -1,0 +1,26 @@
+[Unit]
+Description=Mornye personal assistant
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mornye
+WorkingDirectory=/opt/mornye
+EnvironmentFile=/etc/mornye.env
+ExecStart=/opt/mornye/mornye --config /opt/mornye/mornye.toml serve
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+KillMode=control-group
+UMask=0077
+# Resource control only; no filesystem/network sandbox is configured.
+MemoryAccounting=true
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

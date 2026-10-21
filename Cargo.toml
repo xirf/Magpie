@@ -1,38 +1,30 @@
 [package]
-name = "magpie"
-version = "0.0.1"
-edition = "2021"
-
-[[bin]]
-name = "magpie"
-path = "src/main.rs"
-
-[[bin]]
-name = "magpie-cli"
-path = "src/cli/main.rs"
-
-[features]
-# Run with: cargo test --features integration
-# Requires a live torrent client (aria2/qBittorrent) configured in data/config.yml
-integration = []
+name = "mornye"
+version = "0.1.0"
+edition = "2024"
 
 [dependencies]
-tokio = { version = "1.38", features = ["full"] }
-serenity = { version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
-teloxide = { version = "0.12", default-features = false, features = ["macros", "rustls", "ctrlc_handler"] }
-redis = { version = "0.25", features = ["tokio-comp"] }
-rusqlite = { version = "0.31", features = ["bundled"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-serde_json = "1.0"
-sysinfo = "0.30"
-rust-s3 = { version = "0.35", default-features = false, features = ["tokio-rustls-tls"] }
-notify = "6.1"
-futures = "0.3"
-base64 = "0.22"
-async-trait = "0.1"
-axum = "0.7"
-zip = "0.6"
-bytes = "1.4"
-clap = { version = "4.6.1", features = ["derive"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+fs2 = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["macros", "rt", "process", "io-util", "time", "signal"] }
+toml = "0.8"
+uuid = { version = "1", features = ["v4"] }
+tree-sitter = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-typescript = "0.23"
+walkdir = "2"
+serenity = { version = "0.12.5", default-features = false, features = ["client", "gateway", "model", "http", "rustls_backend"] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+lto = "thin"
+strip = true
+codegen-units = 1

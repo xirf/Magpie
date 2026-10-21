@@ -1,179 +1,109 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tokio::time::{self, Duration};
+mod agent;
+mod config;
+mod discord;
+mod graph;
+mod provider;
+mod store;
+#[cfg(test)]
+#[allow(dead_code)]
+mod telegram;
+#[cfg(test)]
+mod tests;
+mod tools;
 
-use magpie::config::Settings;
-use magpie::redis_client::RedisWrapper;
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
+use std::{
+    io::{self, Write},
+    path::PathBuf,
+};
 
-#[tokio::main]
-async fn main() {
-    println!("Starting Magpie (Rust version)...");
+#[derive(Parser)]
+#[command(
+    version,
+    about = "Mornye: a small persistent assistant with explicit action review"
+)]
+struct Cli {
+    #[arg(long, default_value = "mornye.toml")]
+    config: PathBuf,
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+#[derive(Subcommand)]
+enum Command {
+    /// Interactive terminal chat. /help lists control commands.
+    Chat,
+    /// Process one message or slash command, preserving the CLI conversation.
+    Ask { message: String },
+    /// Run the owner-authorized Discord service and persisted one-time schedules.
+    Serve,
+    /// Print configuration and runtime status without calling a model.
+    Doctor,
+}
 
-    // Load configuration settings
-    let mut settings = Settings::load_settings();
-
-    // Sync users with SQLite database
-    match magpie::db::sync_users(&settings.users) {
-        Ok(synced_users) => {
-            settings.users = synced_users;
-        }
-        Err(e) => {
-            eprintln!(
-                "Failed to sync users with SQLite database, falling back to config users: {:?}",
-                e
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
+    let cli = Cli::parse();
+    let config = config::Config::load(&cli.config)?;
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(config.state_dir.join("runtime.lock"))?;
+    fs2::FileExt::try_lock_exclusive(&lock).context("Another Mornye process owns this state directory. Stop it before opening another instance.")?;
+    let agent = agent::Agent::new(config)?;
+    match cli.command.unwrap_or(Command::Chat) {
+        Command::Doctor => {
+            println!(
+                "Mornye {}\nArchitecture: {}\nOS: {}\nWorkspace: {}\nState: {}\nProvider: {}\nModel: {}\nAPI key configured: {}\nDiscord owner configured: {}\nExecution: direct host, no sandbox\nReview: all file changes, shell commands, scheduling",
+                env!("CARGO_PKG_VERSION"),
+                std::env::consts::ARCH,
+                std::env::consts::OS,
+                agent.config.workspace.display(),
+                agent.config.state_dir.display(),
+                agent.config.api_base,
+                agent.config.model,
+                std::env::var(&agent.config.api_key_env).is_ok_and(|s| !s.is_empty()),
+                agent.config.discord_user_id.is_some()
             );
         }
-    }
-
-    let settings_arc = Arc::new(RwLock::new(settings));
-
-    // Create and connect to Redis client
-    let redis = RedisWrapper::new();
-    let redis_url = {
-        let s = settings_arc.read().await;
-        s.redis.url.clone()
-    };
-    redis.connect(redis_url.as_deref()).await;
-
-    // Check active bot providers
-    let (is_tg_active, is_dc_active) = {
-        let s = settings_arc.read().await;
-
-        let tg = s.telegram.enabled
-            && !s.telegram.bot_token.is_empty()
-            && s.telegram.bot_token != "PUT_YOUR_TELEGRAM_BOT_TOKEN_HERE";
-
-        let dc = s.discord.enabled
-            && s.discord.token.is_some()
-            && s.discord.token.as_deref().unwrap_or("") != "PUT_YOUR_DISCORD_BOT_TOKEN_HERE";
-
-        (tg, dc)
-    };
-
-    if !is_tg_active && !is_dc_active {
-        eprintln!("\n❌ ERROR: No active bot providers configured!");
-        eprintln!("Please configure a valid Telegram or Discord bot token in data/config.yml.");
-        eprintln!("Make sure to set enabled: true for the provider you want to use.\n");
-        std::process::exit(1);
-    }
-
-    // Initialize shared torrent client manager (qBittorrent or Transmission)
-    let torrent_client = {
-        let s = settings_arc.read().await;
-        magpie::torrent_client::create_client(&s)
-    };
-
-    // Initialize Telegram bot
-    let mut tg_bot = None;
-    if is_tg_active {
-        println!("Starting Telegram Bot...");
-        let bot = magpie::telegram::start_telegram_bot(
-            settings_arc.clone(),
-            redis.clone(),
-            torrent_client.clone(),
-        )
-        .await;
-        tg_bot = Some(bot);
-    } else {
-        println!("Telegram bot is disabled or not configured.");
-    }
-
-    // Initialize Discord bot
-    let mut dc_client = None;
-    if is_dc_active {
-        println!("Starting Discord Bot...");
-        match magpie::discord::start_discord_bot(settings_arc.clone(), torrent_client.clone()).await {
-            Ok(client) => {
-                dc_client = Some(client);
-            }
-            Err(e) => {
-                eprintln!("Failed to initialize Discord bot: {:?}", e);
+        Command::Ask { message } => println!("{}", display(&agent.input("cli", &message).await?)),
+        Command::Serve => {
+            tokio::select! {
+                result = discord::serve(&agent) => result?,
+                _ = tokio::signal::ctrl_c() => eprintln!("Stopping. Inspect in-flight actions on restart."),
             }
         }
-    } else {
-        println!("Discord bot is disabled or not configured.");
-    }
-
-    // Extract Discord HTTP ref if active
-    let dc_http = dc_client.as_ref().map(|c| c.http.clone());
-
-    // Spawn Discord bot if active
-    if let Some(mut client) = dc_client {
-        tokio::spawn(async move {
-            if let Err(e) = client.start().await {
-                eprintln!("Discord bot error: {:?}", e);
+        Command::Chat => {
+            println!(
+                "Mornye — /help for commands, /quit to exit. Host tools require review before changes."
+            );
+            loop {
+                print!("you> ");
+                io::stdout().flush()?;
+                let mut input = String::new();
+                if io::stdin().read_line(&mut input)? == 0 || input.trim() == "/quit" {
+                    break;
+                }
+                let result = tokio::select! {
+                    result = agent.input("cli",&input) => result,
+                    _ = tokio::signal::ctrl_c() => { eprintln!("Interrupted. Restart and inspect /status before retrying."); break; }
+                };
+                match result {
+                    Ok(reply) => println!("mornye> {}\n", display(&reply)),
+                    Err(error) => eprintln!(
+                        "Error: {}\nProgress saved. /retry resumes; /cancel stops the turn.",
+                        display(&error.to_string())
+                    ),
+                }
             }
-        });
-    }
-
-    // Spin up local download web server if enabled
-    let settings_for_server = settings_arc.clone();
-    tokio::spawn(async move {
-        let enabled = {
-            let s = settings_for_server.read().await;
-            s.local_server.enabled
-        };
-        if enabled {
-            magpie::server::start_server(settings_for_server).await;
-        }
-    });
-
-    // Watch config.yml for hot reloading
-    magpie::tasks::watch_config(settings_arc.clone());
-
-    // Schedule periodic completed torrent checks (every 60 seconds)
-    let tg_bot_for_check = tg_bot.clone();
-    let redis_for_check = redis.clone();
-    let settings_for_check = settings_arc.clone();
-    let client_for_check = torrent_client.clone();
-    let dc_http_for_check = dc_http.clone();
-
-    tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(60));
-        loop {
-            interval.tick().await;
-            let _ = magpie::db::prune_expired_local_downloads();
-            let current_settings = settings_for_check.read().await.clone();
-            magpie::tasks::torrent_finished(
-                tg_bot_for_check.as_ref(),
-                dc_http_for_check.clone(),
-                &redis_for_check,
-                &current_settings,
-                &*client_for_check,
-            )
-            .await;
-        }
-    });
-
-    // Schedule periodic progress update edits (every 1 hour)
-    let tg_bot_for_progress = tg_bot.clone();
-    let redis_for_progress = redis.clone();
-    let settings_for_progress = settings_arc.clone();
-    let client_for_progress = torrent_client.clone();
-    let dc_http_for_progress = dc_http.clone();
-
-    tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(3600));
-        loop {
-            interval.tick().await;
-            let current_settings = settings_for_progress.read().await.clone();
-            magpie::tasks::torrent_progress_update(
-                tg_bot_for_progress.as_ref(),
-                dc_http_for_progress.clone(),
-                &redis_for_progress,
-                &current_settings,
-                &*client_for_progress,
-            )
-            .await;
-        }
-    });
-
-    println!("Magpie is online and polling for updates...");
-
-    // Setup graceful shutdown handler
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {
-            println!("Stopping bot and cleaning up...");
         }
     }
+    Ok(())
+}
+fn display(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_control() || matches!(c, '\n' | '\t'))
+        .collect()
 }
