@@ -41,19 +41,19 @@ pub fn schemas() -> Value {
         ),
         (
             "write_file",
-            "Propose creating or replacing a UTF-8 file. Requires explicit human approval of the complete content.",
+            "Create or replace a UTF-8 file. Executes automatically unless runtime approval mode is manual.",
             json!({"path":{"type":"string"},"content":{"type":"string"}}),
             vec!["path", "content"],
         ),
         (
             "delete_file",
-            "Propose deleting one file. Directories are rejected. Requires human approval.",
+            "Delete one file. Directories are rejected. Executes automatically unless runtime approval mode is manual.",
             json!({"path":{"type":"string"}}),
             vec!["path"],
         ),
         (
             "shell",
-            "Propose an exact host shell command for tests, SSH, deployment, or other operations. ALWAYS requires human approval. Return exit status and bounded stdout/stderr. Do not detach processes or embed secrets.",
+            "Execute an exact host shell command for tests, SSH, deployment, or other operations. Executes automatically unless runtime approval mode is manual. Return exit status and bounded stdout/stderr. Do not detach processes or embed secrets.",
             json!({"command":{"type":"string"},"purpose":{"type":"string"}}),
             vec!["command", "purpose"],
         ),
@@ -83,7 +83,7 @@ pub fn schemas() -> Value {
         ),
         (
             "schedule",
-            "Propose a one-time future task. delay_seconds is elapsed seconds. The task runs only while the Telegram service is running, and all future action approvals still apply.",
+            "Schedule a one-time future task. delay_seconds is elapsed seconds. The task runs only while the service is running. Runtime approval mode applies to scheduling and future actions.",
             json!({"prompt":{"type":"string"},"delay_seconds":{"type":"integer","minimum":60,"maximum":31536000}}),
             vec!["prompt", "delay_seconds"],
         ),
@@ -134,7 +134,7 @@ fn fingerprint(path: &Path) -> Result<String> {
     ensure!(path.is_file(), "Expected a regular file");
     ensure!(
         std::fs::metadata(path)?.len() <= MAX_FILE,
-        "File exceeds 128 KiB limit; use a reviewed shell command for larger files"
+        "File exceeds 128 KiB limit; use a shell command for larger files"
     );
     Ok(format!("{:x}", Sha256::digest(std::fs::read(path)?)))
 }

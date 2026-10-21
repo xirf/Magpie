@@ -50,6 +50,7 @@ fn config(dir: &Path) -> Config {
         state_dir: dir.join("state"),
         workspace: dir.to_owned(),
         api_key_env: "PATH".into(),
+        auto_approve: false,
         ..Config::default()
     }
 }
@@ -108,6 +109,84 @@ fn mock(messages: Vec<Value>) -> String {
 
 fn call(name: &str, args: Value) -> Value {
     json!({"role":"assistant","content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":name,"arguments":args.to_string()}}]})
+}
+
+#[tokio::test]
+async fn default_auto_approval_runs_consecutive_shell_commands_without_prompts() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut second = call(
+        "shell",
+        json!({"command":"echo second","purpose":"Read-only diagnostic"}),
+    );
+    second["tool_calls"][0]["id"] = json!("call-2");
+    let base = mock(vec![
+        call(
+            "shell",
+            json!({"command":"echo first","purpose":"Read-only diagnostic"}),
+        ),
+        second,
+        json!({"role":"assistant","content":"Diagnostics complete."}),
+    ]);
+    let mut c = config(dir.path());
+    c.auto_approve = Config::default().auto_approve;
+    c.api_base = base;
+    std::fs::create_dir_all(&c.state_dir).unwrap();
+    let a = Agent::new(c).unwrap();
+    assert_eq!(
+        a.input("cli", "Check system status").await.unwrap(),
+        "Diagnostics complete."
+    );
+    assert!(a.store.pending("cli").unwrap().is_none());
+    for (call_id, output) in [("call-1", "first"), ("call-2", "second")] {
+        let action = a.store.action("cli", call_id).unwrap().unwrap();
+        assert_eq!(action["status"], "finished");
+        let result: Value = serde_json::from_str(action["result"].as_str().unwrap()).unwrap();
+        assert_eq!(result["success"], true);
+        assert!(result["stdout"].as_str().unwrap().contains(output));
+    }
+    assert_eq!(
+        a.input("cli", "/retry").await.unwrap(),
+        "No unfinished turn."
+    );
+}
+
+#[test]
+fn existing_configs_default_to_auto_approval_and_can_opt_into_manual_review() {
+    let default: Config = toml::from_str("model = 'existing-model'").unwrap();
+    assert!(default.auto_approve);
+    let manual: Config = toml::from_str("auto_approve = false").unwrap();
+    assert!(!manual.auto_approve);
+}
+
+#[tokio::test]
+async fn auto_approval_resumes_a_previously_pending_action_once_after_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let base = mock(vec![
+        call("write_file", json!({"path":"resumed.txt","content":"done"})),
+        json!({"role":"assistant","content":"Resumed."}),
+    ]);
+    let a = agent(dir.path(), base.clone());
+    assert!(
+        a.input("cli", "Write the file")
+            .await
+            .unwrap()
+            .contains("REVIEW REQUIRED")
+    );
+    assert!(!dir.path().join("resumed.txt").exists());
+    let mut c = a.config.clone();
+    drop(a);
+    c.auto_approve = true;
+    let a = Agent::new(c).unwrap();
+    assert_eq!(a.input("cli", "Continue").await.unwrap(), "Resumed.");
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("resumed.txt")).unwrap(),
+        "done"
+    );
+    assert!(a.store.pending("cli").unwrap().is_none());
+    assert_eq!(
+        a.input("cli", "/retry").await.unwrap(),
+        "No unfinished turn."
+    );
 }
 
 #[tokio::test]

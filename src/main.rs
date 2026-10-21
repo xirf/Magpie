@@ -21,7 +21,7 @@ use std::{
 #[derive(Parser)]
 #[command(
     version,
-    about = "Mornye: a small persistent assistant with explicit action review"
+    about = "Mornye: a small persistent assistant with configurable tool approval"
 )]
 struct Cli {
     #[arg(long, default_value = "mornye.toml")]
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
     match cli.command.unwrap_or(Command::Chat) {
         Command::Doctor => {
             println!(
-                "Mornye {}\nArchitecture: {}\nOS: {}\nWorkspace: {}\nState: {}\nProvider: {}\nModel: {}\nAPI key configured: {}\nDiscord owner configured: {}\nExecution: direct host, no sandbox\nReview: all file changes, shell commands, scheduling",
+                "Mornye {}\nArchitecture: {}\nOS: {}\nWorkspace: {}\nState: {}\nProvider: {}\nModel: {}\nAPI key configured: {}\nDiscord owner configured: {}\nExecution: direct host, no sandbox\nApproval: {}",
                 env!("CARGO_PKG_VERSION"),
                 std::env::consts::ARCH,
                 std::env::consts::OS,
@@ -65,7 +65,8 @@ async fn main() -> Result<()> {
                 agent.config.api_base,
                 agent.config.model,
                 std::env::var(&agent.config.api_key_env).is_ok_and(|s| !s.is_empty()),
-                agent.config.discord_user_id.is_some()
+                agent.config.discord_user_id.is_some(),
+                agent.config.approval_mode()
             );
         }
         Command::Ask { message } => println!("{}", display(&agent.input("cli", &message).await?)),
@@ -77,7 +78,8 @@ async fn main() -> Result<()> {
         }
         Command::Chat => {
             println!(
-                "Mornye — /help for commands, /quit to exit. Host tools require review before changes."
+                "Mornye — /help for commands, /quit to exit. Approval: {}",
+                agent.config.approval_mode()
             );
             loop {
                 print!("you> ");

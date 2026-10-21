@@ -8,6 +8,7 @@ max_steps = 16
 max_context_bytes = 96000
 max_output_tokens = 4096
 command_timeout_secs = 120
+auto_approve = true # Default. Set false to require /approve ID for each action.
 
 # Required for `mornye serve`. Default: owner DMs only.
 # discord_user_id = 123456789

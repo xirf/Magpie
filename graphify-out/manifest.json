@@ -1,14 +1,14 @@
 {
   "src/agent.rs": {
-    "mtime": 1792234618.7971704,
-    "seen": 1792234635.5104344,
-    "ast_hash": "fbf44cf300ab854bf2411a3efb7b1ff2",
+    "mtime": 1792608425.4521544,
+    "seen": 1792608487.099053,
+    "ast_hash": "fb5ac7c27079f95bad126bf862e16a06",
     "semantic_hash": ""
   },
   "src/config.rs": {
-    "mtime": 1792177780.6141548,
-    "seen": 1792177968.9313326,
-    "ast_hash": "285d17e8440d263e6b6276cbbe30c2b5",
+    "mtime": 1792608425.3345125,
+    "seen": 1792608487.0990543,
+    "ast_hash": "a3a920551ed0e563af328b16aac8899e",
     "semantic_hash": ""
   },
   "src/graph.rs": {
@@ -18,9 +18,9 @@
     "semantic_hash": ""
   },
   "src/main.rs": {
-    "mtime": 1792177900.7425306,
-    "seen": 1792177968.9313364,
-    "ast_hash": "6618d30d2dd43e042a75f700f781b4c9",
+    "mtime": 1792608524.0723574,
+    "seen": 1792608527.9340062,
+    "ast_hash": "9be23f44203e4e75163dee26fa5f2985",
     "semantic_hash": ""
   },
   "src/provider.rs": {
@@ -42,15 +42,15 @@
     "semantic_hash": "113cb3653ae11fd374fb76c6dd893f69"
   },
   "src/tests.rs": {
-    "mtime": 1792234618.8147402,
-    "seen": 1792234635.5104434,
-    "ast_hash": "1a7daa38178d6aa21bcdecb62ed45ff5",
+    "mtime": 1792608468.814504,
+    "seen": 1792608487.0990624,
+    "ast_hash": "a0814afdf8811e41c45e3875f5eab2f9",
     "semantic_hash": ""
   },
   "src/tools.rs": {
-    "mtime": 1792177901.0473301,
-    "seen": 1792177968.9313426,
-    "ast_hash": "6aa79f5b8faa3409543b1ce6b507b505",
+    "mtime": 1792608524.4330623,
+    "seen": 1792608527.9340124,
+    "ast_hash": "bec48b83e6b9490ee17000c76b9bffc2",
     "semantic_hash": ""
   },
   ".codex/hooks.json": {
@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1792234870.7241714,
-    "seen": 1792234872.7578518,
-    "ast_hash": "9f879c0eab8845e415318151e5cc19f7",
+    "mtime": 1792608584.1113591,
+    "seen": 1792608585.3408113,
+    "ast_hash": "c3180d6edfb4d1c796774d97278bf69d",
     "semantic_hash": ""
   },
   "docs/research-and-design.md": {
@@ -96,9 +96,9 @@
     "semantic_hash": ""
   },
   "docs/validation-armbian.md": {
-    "mtime": 1792234870.725166,
-    "seen": 1792234872.7578566,
-    "ast_hash": "718436149e39a0d8c8474bebb0fb7262",
+    "mtime": 1792262579.2833254,
+    "seen": 1792608487.0990708,
+    "ast_hash": "fa3ec5425bc7d1394044be431406df74",
     "semantic_hash": ""
   },
   "docs/upstream-audit.md": {

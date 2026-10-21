@@ -72,7 +72,7 @@
       "_origin": "ast",
       "_rust_declaration_count": 1,
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "provider",
       "source_file": "src/provider.rs",
@@ -623,6 +623,137 @@
       "version": "0.1.0"
     },
     {
+      "id": "docs_validation_armbian_b860h_validation_\u00e2_2026_10_17",
+      "label": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "b860h validation a\u20ac\u201d 2026-10-17",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "docs_validation_armbian_build_and_execution",
+      "label": "Build and execution",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "build and execution",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L40"
+    },
+    {
+      "id": "docs_validation_armbian_device",
+      "label": "Device",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "device",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L13"
+    },
+    {
+      "id": "docs_validation_armbian_discord_deployment_2026_10_18",
+      "label": "Discord deployment, 2026-10-18",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "discord deployment, 2026-10-18",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L248"
+    },
+    {
+      "id": "docs_validation_armbian_discord_revision_validation_2026_10_17",
+      "label": "Discord revision validation, 2026-10-17",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "discord revision validation, 2026-10-17",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L199"
+    },
+    {
+      "id": "docs_validation_armbian_files_on_the_device",
+      "label": "Files on the device",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "files on the device",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L127"
+    },
+    {
+      "id": "docs_validation_armbian_memory_correction_revision_validation_2026_10_17",
+      "label": "Memory correction revision validation, 2026-10-17",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "memory correction revision validation, 2026-10-17",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L220"
+    },
+    {
+      "id": "docs_validation_armbian_memory_observation",
+      "label": "Memory observation",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "memory observation",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L91"
+    },
+    {
+      "id": "docs_validation_armbian_mornye_character_profile_revision_2026_10_17",
+      "label": "Mornye character profile revision, 2026-10-17",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "mornye character profile revision, 2026-10-17",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L237"
+    },
+    {
+      "id": "docs_validation_armbian_remaining_activation_steps",
+      "label": "Remaining activation steps",
+      "_origin": "ast",
+      "community": 11,
+      "community_name": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "remaining activation steps",
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L178"
+    },
+    {
+      "id": "src_agent",
+      "label": "agent.rs",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Agent",
+      "file_type": "code",
+      "norm_label": "agent.rs",
+      "source_file": "src/agent.rs",
+      "source_location": "L1"
+    },
+    {
       "id": "src_agent_agent_command",
       "label": ".command()",
       "_origin": "ast",
@@ -631,7 +762,7 @@
       "file_type": "code",
       "norm_label": ".command()",
       "source_file": "src/agent.rs",
-      "source_location": "L210"
+      "source_location": "L222"
     },
     {
       "id": "src_agent_agent_drive",
@@ -642,7 +773,7 @@
       "file_type": "code",
       "norm_label": ".drive()",
       "source_file": "src/agent.rs",
-      "source_location": "L73"
+      "source_location": "L77"
     },
     {
       "id": "src_agent_agent_input",
@@ -664,7 +795,7 @@
       "file_type": "code",
       "norm_label": ".perform()",
       "source_file": "src/agent.rs",
-      "source_location": "L180"
+      "source_location": "L192"
     },
     {
       "id": "src_agent_agent_rows",
@@ -675,7 +806,7 @@
       "file_type": "code",
       "norm_label": ".rows()",
       "source_file": "src/agent.rs",
-      "source_location": "L289"
+      "source_location": "L301"
     },
     {
       "id": "src_agent_agent_tool_result",
@@ -686,7 +817,7 @@
       "file_type": "code",
       "norm_label": ".tool_result()",
       "source_file": "src/agent.rs",
-      "source_location": "L173"
+      "source_location": "L185"
     },
     {
       "id": "src_agent_budget_rows",
@@ -697,7 +828,18 @@
       "file_type": "code",
       "norm_label": "budget_rows()",
       "source_file": "src/agent.rs",
-      "source_location": "L333"
+      "source_location": "L345"
+    },
+    {
+      "id": "src_agent_default_character_profile",
+      "label": "DEFAULT_CHARACTER_PROFILE",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Agent",
+      "file_type": "code",
+      "norm_label": "default_character_profile",
+      "source_file": "src/agent.rs",
+      "source_location": "L18"
     },
     {
       "id": "src_agent_review",
@@ -708,7 +850,7 @@
       "file_type": "code",
       "norm_label": "review()",
       "source_file": "src/agent.rs",
-      "source_location": "L322"
+      "source_location": "L334"
     },
     {
       "id": "src_agent_rs_value",
@@ -722,6 +864,17 @@
       "source_location": ""
     },
     {
+      "id": "src_agent_rules",
+      "label": "RULES",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Agent",
+      "file_type": "code",
+      "norm_label": "rules",
+      "source_file": "src/agent.rs",
+      "source_location": "L7"
+    },
+    {
       "id": "src_agent_unresolved",
       "label": "unresolved()",
       "_origin": "ast",
@@ -730,7 +883,7 @@
       "file_type": "code",
       "norm_label": "unresolved()",
       "source_file": "src/agent.rs",
-      "source_location": "L309"
+      "source_location": "L321"
     },
     {
       "id": "src_telegram",
@@ -854,6 +1007,17 @@
       "source_location": "L27"
     },
     {
+      "id": "src_config_config_approval_mode",
+      "label": ".approval_mode()",
+      "_origin": "ast",
+      "community": 3,
+      "community_name": "tools.rs",
+      "file_type": "code",
+      "norm_label": ".approval_mode()",
+      "source_file": "src/config.rs",
+      "source_location": "L44"
+    },
+    {
       "id": "src_config_config_default",
       "label": ".default()",
       "_origin": "ast",
@@ -862,7 +1026,7 @@
       "file_type": "code",
       "norm_label": ".default()",
       "source_file": "src/config.rs",
-      "source_location": "L23"
+      "source_location": "L24"
     },
     {
       "id": "src_config_config_load",
@@ -873,7 +1037,7 @@
       "file_type": "code",
       "norm_label": ".load()",
       "source_file": "src/config.rs",
-      "source_location": "L42"
+      "source_location": "L52"
     },
     {
       "id": "src_tools",
@@ -1295,114 +1459,6 @@
       "source_location": "L1"
     },
     {
-      "id": "docs_validation_armbian_b860h_validation_\u00e2_2026_10_17",
-      "label": "B860H validation \u00e2\u20ac\u201d 2026-10-17",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "b860h validation a\u20ac\u201d 2026-10-17",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "docs_validation_armbian_build_and_execution",
-      "label": "Build and execution",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "build and execution",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L40"
-    },
-    {
-      "id": "docs_validation_armbian_device",
-      "label": "Device",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "device",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L13"
-    },
-    {
-      "id": "docs_validation_armbian_discord_revision_validation_2026_10_17",
-      "label": "Discord revision validation, 2026-10-17",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "discord revision validation, 2026-10-17",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L199"
-    },
-    {
-      "id": "docs_validation_armbian_files_on_the_device",
-      "label": "Files on the device",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "files on the device",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L127"
-    },
-    {
-      "id": "docs_validation_armbian_memory_correction_revision_validation_2026_10_17",
-      "label": "Memory correction revision validation, 2026-10-17",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "memory correction revision validation, 2026-10-17",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L220"
-    },
-    {
-      "id": "docs_validation_armbian_memory_observation",
-      "label": "Memory observation",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "memory observation",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L91"
-    },
-    {
-      "id": "docs_validation_armbian_mornye_character_profile_revision_2026_10_17",
-      "label": "Mornye character profile revision, 2026-10-17",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "mornye character profile revision, 2026-10-17",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L237"
-    },
-    {
-      "id": "docs_validation_armbian_remaining_activation_steps",
-      "label": "Remaining activation steps",
-      "_origin": "ast",
-      "community": 4,
-      "community_name": "Mornye: research and proposed design",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "remaining activation steps",
-      "source_file": "docs/validation-armbian.md",
-      "source_location": "L178"
-    },
-    {
       "id": "readme",
       "label": "README.md",
       "_origin": "ast",
@@ -1434,7 +1490,7 @@
       "file_type": "code",
       "norm_label": "agent()",
       "source_file": "src/tests.rs",
-      "source_location": "L57"
+      "source_location": "L58"
     },
     {
       "id": "src_tests_approval_is_exact_single_use_and_survives_restart",
@@ -1445,7 +1501,18 @@
       "file_type": "code",
       "norm_label": "approval_is_exact_single_use_and_survives_restart()",
       "source_file": "src/tests.rs",
-      "source_location": "L114"
+      "source_location": "L193"
+    },
+    {
+      "id": "src_tests_auto_approval_resumes_a_previously_pending_action_once_after_restart",
+      "label": "auto_approval_resumes_a_previously_pending_action_once_after_restart()",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "tests.rs",
+      "file_type": "code",
+      "norm_label": "auto_approval_resumes_a_previously_pending_action_once_after_restart()",
+      "source_file": "src/tests.rs",
+      "source_location": "L162"
     },
     {
       "id": "src_tests_call",
@@ -1456,7 +1523,7 @@
       "file_type": "code",
       "norm_label": "call()",
       "source_file": "src/tests.rs",
-      "source_location": "L109"
+      "source_location": "L110"
     },
     {
       "id": "src_tests_changed_file_cannot_be_deleted_with_old_approval",
@@ -1467,7 +1534,7 @@
       "file_type": "code",
       "norm_label": "changed_file_cannot_be_deleted_with_old_approval()",
       "source_file": "src/tests.rs",
-      "source_location": "L154"
+      "source_location": "L233"
     },
     {
       "id": "src_tests_character_profile_is_installed_by_default_and_user_edits_survive_restart",
@@ -1489,7 +1556,7 @@
       "file_type": "code",
       "norm_label": "command_timeout_is_recorded_as_failure()",
       "source_file": "src/tests.rs",
-      "source_location": "L540"
+      "source_location": "L619"
     },
     {
       "id": "src_tests_config",
@@ -1511,7 +1578,7 @@
       "file_type": "code",
       "norm_label": "context_trimming_preserves_complete_tool_groups()",
       "source_file": "src/tests.rs",
-      "source_location": "L431"
+      "source_location": "L510"
     },
     {
       "id": "src_tests_crash_recovery_marks_execution_uncertain",
@@ -1522,7 +1589,18 @@
       "file_type": "code",
       "norm_label": "crash_recovery_marks_execution_uncertain()",
       "source_file": "src/tests.rs",
-      "source_location": "L206"
+      "source_location": "L285"
+    },
+    {
+      "id": "src_tests_default_auto_approval_runs_consecutive_shell_commands_without_prompts",
+      "label": "default_auto_approval_runs_consecutive_shell_commands_without_prompts()",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "tests.rs",
+      "file_type": "code",
+      "norm_label": "default_auto_approval_runs_consecutive_shell_commands_without_prompts()",
+      "source_file": "src/tests.rs",
+      "source_location": "L115"
     },
     {
       "id": "src_tests_denied_shell_never_runs",
@@ -1533,7 +1611,18 @@
       "file_type": "code",
       "norm_label": "denied_shell_never_runs()",
       "source_file": "src/tests.rs",
-      "source_location": "L184"
+      "source_location": "L263"
+    },
+    {
+      "id": "src_tests_existing_configs_default_to_auto_approval_and_can_opt_into_manual_review",
+      "label": "existing_configs_default_to_auto_approval_and_can_opt_into_manual_review()",
+      "_origin": "ast",
+      "community": 5,
+      "community_name": "tests.rs",
+      "file_type": "code",
+      "norm_label": "existing_configs_default_to_auto_approval_and_can_opt_into_manual_review()",
+      "source_file": "src/tests.rs",
+      "source_location": "L154"
     },
     {
       "id": "src_tests_expired_approval_does_not_execute",
@@ -1544,7 +1633,7 @@
       "file_type": "code",
       "norm_label": "expired_approval_does_not_execute()",
       "source_file": "src/tests.rs",
-      "source_location": "L514"
+      "source_location": "L593"
     },
     {
       "id": "src_tests_learned_skills_remain_inactive_until_human_promotes",
@@ -1555,7 +1644,7 @@
       "file_type": "code",
       "norm_label": "learned_skills_remain_inactive_until_human_promotes()",
       "source_file": "src/tests.rs",
-      "source_location": "L337"
+      "source_location": "L416"
     },
     {
       "id": "src_tests_memories_are_scoped_and_forget_removes_search_result",
@@ -1566,7 +1655,7 @@
       "file_type": "code",
       "norm_label": "memories_are_scoped_and_forget_removes_search_result()",
       "source_file": "src/tests.rs",
-      "source_location": "L219"
+      "source_location": "L298"
     },
     {
       "id": "src_tests_memory_correction_preserves_lineage_and_removes_false_fact_from_retrieval",
@@ -1577,7 +1666,7 @@
       "file_type": "code",
       "norm_label": "memory_correction_preserves_lineage_and_removes_false_fact_from_retrieval()",
       "source_file": "src/tests.rs",
-      "source_location": "L281"
+      "source_location": "L360"
     },
     {
       "id": "src_tests_mock",
@@ -1588,7 +1677,7 @@
       "file_type": "code",
       "norm_label": "mock()",
       "source_file": "src/tests.rs",
-      "source_location": "L64"
+      "source_location": "L65"
     },
     {
       "id": "src_tests_model_cannot_forge_policy_or_approval_fields",
@@ -1599,7 +1688,7 @@
       "file_type": "code",
       "norm_label": "model_cannot_forge_policy_or_approval_fields()",
       "source_file": "src/tests.rs",
-      "source_location": "L391"
+      "source_location": "L470"
     },
     {
       "id": "src_tests_output_is_bounded_and_failed_commands_are_not_success",
@@ -1610,7 +1699,7 @@
       "file_type": "code",
       "norm_label": "output_is_bounded_and_failed_commands_are_not_success()",
       "source_file": "src/tests.rs",
-      "source_location": "L410"
+      "source_location": "L489"
     },
     {
       "id": "src_tests_prior_memory_database_gets_status_column_without_losing_rows",
@@ -1643,7 +1732,7 @@
       "file_type": "code",
       "norm_label": "syntax_graph_updates_changed_files_and_flags_deleted_sources()",
       "source_file": "src/tests.rs",
-      "source_location": "L461"
+      "source_location": "L540"
     },
     {
       "id": "src_tests_telegram_rejects_other_users_groups_and_bots",
@@ -1654,47 +1743,14 @@
       "file_type": "code",
       "norm_label": "telegram_rejects_other_users_groups_and_bots()",
       "source_file": "src/tests.rs",
-      "source_location": "L379"
-    },
-    {
-      "id": "src_agent",
-      "label": "agent.rs",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "agent.rs",
-      "file_type": "code",
-      "norm_label": "agent.rs",
-      "source_file": "src/agent.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "src_agent_default_character_profile",
-      "label": "DEFAULT_CHARACTER_PROFILE",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "agent.rs",
-      "file_type": "code",
-      "norm_label": "default_character_profile",
-      "source_file": "src/agent.rs",
-      "source_location": "L18"
-    },
-    {
-      "id": "src_agent_rules",
-      "label": "RULES",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "agent.rs",
-      "file_type": "code",
-      "norm_label": "rules",
-      "source_file": "src/agent.rs",
-      "source_location": "L7"
+      "source_location": "L458"
     },
     {
       "id": "src_config",
       "label": "config.rs",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "config.rs",
       "source_file": "src/config.rs",
@@ -1705,7 +1761,7 @@
       "label": "provider.rs",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "provider.rs",
       "source_file": "src/provider.rs",
@@ -1716,7 +1772,7 @@
       "label": ".complete()",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": ".complete()",
       "source_file": "src/provider.rs",
@@ -1727,7 +1783,7 @@
       "label": ".new()",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": ".new()",
       "source_file": "src/provider.rs",
@@ -1738,7 +1794,7 @@
       "label": "Client",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "client",
       "source_file": "",
@@ -1749,7 +1805,7 @@
       "label": "Value",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "value",
       "source_file": "",
@@ -1760,7 +1816,7 @@
       "label": "validate()",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "validate()",
       "source_file": "src/provider.rs",
@@ -1771,7 +1827,7 @@
       "label": "store.rs",
       "_origin": "ast",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "file_type": "code",
       "norm_label": "store.rs",
       "source_file": "src/store.rs",
@@ -1841,7 +1897,7 @@
       "file_type": "code",
       "norm_label": "display()",
       "source_file": "src/main.rs",
-      "source_location": "L105"
+      "source_location": "L107"
     },
     {
       "id": "src_main_main",
@@ -1855,18 +1911,6 @@
       "source_location": "L45"
     },
     {
-      "id": "readme_approval_is_enforced_in_code",
-      "label": "Approval is enforced in code",
-      "_origin": "ast",
-      "community": 8,
-      "community_name": "Mornye",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "approval is enforced in code",
-      "source_file": "README.md",
-      "source_location": "L226"
-    },
-    {
       "id": "readme_b860h_deployment",
       "label": "B860H deployment",
       "_origin": "ast",
@@ -1876,7 +1920,7 @@
       "node_kind": "heading",
       "norm_label": "b860h deployment",
       "source_file": "README.md",
-      "source_location": "L476"
+      "source_location": "L87"
     },
     {
       "id": "readme_coding_and_deployment",
@@ -1888,7 +1932,7 @@
       "node_kind": "heading",
       "norm_label": "coding and deployment",
       "source_file": "README.md",
-      "source_location": "L426"
+      "source_location": "L77"
     },
     {
       "id": "readme_commands_and_checks",
@@ -1900,7 +1944,7 @@
       "node_kind": "heading",
       "norm_label": "commands and checks",
       "source_file": "README.md",
-      "source_location": "L556"
+      "source_location": "L103"
     },
     {
       "id": "readme_discord_continuous_operation",
@@ -1912,7 +1956,7 @@
       "node_kind": "heading",
       "norm_label": "discord / continuous operation",
       "source_file": "README.md",
-      "source_location": "L311"
+      "source_location": "L54"
     },
     {
       "id": "readme_memory_personality_and_learning",
@@ -1924,7 +1968,7 @@
       "node_kind": "heading",
       "norm_label": "memory, personality, and learning",
       "source_file": "README.md",
-      "source_location": "L386"
+      "source_location": "L69"
     },
     {
       "id": "readme_mornye",
@@ -1948,7 +1992,19 @@
       "node_kind": "heading",
       "norm_label": "start on your development machine",
       "source_file": "README.md",
-      "source_location": "L106"
+      "source_location": "L22"
+    },
+    {
+      "id": "readme_tool_approval",
+      "label": "Tool approval",
+      "_origin": "ast",
+      "community": 8,
+      "community_name": "Mornye",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "tool approval",
+      "source_file": "README.md",
+      "source_location": "L46"
     },
     {
       "id": "readme_what_works",
@@ -1960,7 +2016,7 @@
       "node_kind": "heading",
       "norm_label": "what works",
       "source_file": "README.md",
-      "source_location": "L31"
+      "source_location": "L7"
     },
     {
       "id": "agents",
@@ -2009,17 +2065,6 @@
       "type": "external"
     },
     {
-      "id": "sha2",
-      "label": "sha2",
-      "community": 1,
-      "community_name": "Store",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "sha2",
-      "source_file": "",
-      "type": "external"
-    },
-    {
       "id": "tree_sitter",
       "label": "tree_sitter",
       "community": 1,
@@ -2038,6 +2083,28 @@
       "external": true,
       "file_type": "concept",
       "norm_label": "optionalextension",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "params",
+      "label": "params",
+      "community": 2,
+      "community_name": "Agent",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "params",
+      "source_file": "",
+      "type": "external"
+    },
+    {
+      "id": "uuid",
+      "label": "uuid",
+      "community": 2,
+      "community_name": "Agent",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "uuid",
       "source_file": "",
       "type": "external"
     },
@@ -2064,10 +2131,21 @@
       "type": "external"
     },
     {
+      "id": "sha2",
+      "label": "sha2",
+      "community": 3,
+      "community_name": "tools.rs",
+      "external": true,
+      "file_type": "concept",
+      "norm_label": "sha2",
+      "source_file": "",
+      "type": "external"
+    },
+    {
       "id": "anyhow",
       "label": "anyhow",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "anyhow",
@@ -2078,7 +2156,7 @@
       "id": "crate",
       "label": "crate",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "crate",
@@ -2089,7 +2167,7 @@
       "id": "duration",
       "label": "duration",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "duration",
@@ -2097,21 +2175,10 @@
       "type": "external"
     },
     {
-      "id": "params",
-      "label": "params",
-      "community": 6,
-      "community_name": "agent.rs",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "params",
-      "source_file": "",
-      "type": "external"
-    },
-    {
       "id": "path",
       "label": "path",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "path",
@@ -2122,7 +2189,7 @@
       "id": "rusqlite",
       "label": "rusqlite",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "rusqlite",
@@ -2133,7 +2200,7 @@
       "id": "serde",
       "label": "serde",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "serde",
@@ -2144,21 +2211,10 @@
       "id": "serde_json",
       "label": "serde_json",
       "community": 6,
-      "community_name": "agent.rs",
+      "community_name": "anyhow",
       "external": true,
       "file_type": "concept",
       "norm_label": "serde_json",
-      "source_file": "",
-      "type": "external"
-    },
-    {
-      "id": "uuid",
-      "label": "uuid",
-      "community": 6,
-      "community_name": "agent.rs",
-      "external": true,
-      "file_type": "concept",
-      "norm_label": "uuid",
       "source_file": "",
       "type": "external"
     },
@@ -2195,7 +2251,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L214",
+      "source_location": "L226",
       "weight": 1.0
     },
     {
@@ -2207,7 +2263,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L224",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -2219,7 +2275,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L235",
+      "source_location": "L247",
       "weight": 1.0
     },
     {
@@ -2231,7 +2287,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L246",
+      "source_location": "L258",
       "weight": 1.0
     },
     {
@@ -2243,19 +2299,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L257",
-      "weight": 1.0
-    },
-    {
-      "source": "src_agent_agent_drive",
-      "target": "src_agent_review",
-      "relation": "calls",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "src/agent.rs",
-      "source_location": "L105",
+      "source_location": "L269",
       "weight": 1.0
     },
     {
@@ -2267,7 +2311,19 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L107",
+      "source_location": "L115",
+      "weight": 1.0
+    },
+    {
+      "source": "src_agent_agent_drive",
+      "target": "src_agent_review",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/agent.rs",
+      "source_location": "L117",
       "weight": 1.0
     },
     {
@@ -2279,7 +2335,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L134",
+      "source_location": "L146",
       "weight": 1.0
     },
     {
@@ -2291,7 +2347,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L76",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -2303,7 +2359,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L89",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
@@ -2320,19 +2376,19 @@
     },
     {
       "source": "src_agent_agent_input",
-      "target": "src_agent_review",
+      "target": "src_agent_agent_drive",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
       "source": "src_agent_agent_input",
-      "target": "src_agent_unresolved",
+      "target": "src_agent_review",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -2344,14 +2400,14 @@
     },
     {
       "source": "src_agent_agent_input",
-      "target": "src_agent_agent_drive",
+      "target": "src_agent_unresolved",
       "relation": "calls",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L70",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -2363,7 +2419,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/agent.rs",
-      "source_location": "L207",
+      "source_location": "L219",
       "weight": 1.0
     },
     {
@@ -2375,7 +2431,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/config.rs",
-      "source_location": "L46",
+      "source_location": "L56",
       "weight": 1.0
     },
     {
@@ -2843,7 +2899,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L58",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -2855,7 +2911,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L116",
+      "source_location": "L195",
       "weight": 1.0
     },
     {
@@ -2867,7 +2923,31 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L123",
+      "source_location": "L202",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_auto_approval_resumes_a_previously_pending_action_once_after_restart",
+      "target": "src_tests_mock",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tests.rs",
+      "source_location": "L164",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_auto_approval_resumes_a_previously_pending_action_once_after_restart",
+      "target": "src_tests_agent",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tests.rs",
+      "source_location": "L168",
       "weight": 1.0
     },
     {
@@ -2879,7 +2959,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L157",
+      "source_location": "L236",
       "weight": 1.0
     },
     {
@@ -2891,7 +2971,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L159",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -2915,7 +2995,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L542",
+      "source_location": "L621",
       "weight": 1.0
     },
     {
@@ -2927,7 +3007,43 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L442",
+      "source_location": "L521",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_default_auto_approval_runs_consecutive_shell_commands_without_prompts",
+      "target": "src_tests_call",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tests.rs",
+      "source_location": "L117",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_default_auto_approval_runs_consecutive_shell_commands_without_prompts",
+      "target": "src_tests_mock",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tests.rs",
+      "source_location": "L122",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests_default_auto_approval_runs_consecutive_shell_commands_without_prompts",
+      "target": "src_tests_config",
+      "relation": "calls",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "src/tests.rs",
+      "source_location": "L130",
       "weight": 1.0
     },
     {
@@ -2939,7 +3055,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L186",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -2951,7 +3067,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L188",
+      "source_location": "L267",
       "weight": 1.0
     },
     {
@@ -2963,7 +3079,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L516",
+      "source_location": "L595",
       "weight": 1.0
     },
     {
@@ -2975,7 +3091,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L518",
+      "source_location": "L597",
       "weight": 1.0
     },
     {
@@ -2987,7 +3103,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L339",
+      "source_location": "L418",
       "weight": 1.0
     },
     {
@@ -2999,7 +3115,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L221",
+      "source_location": "L300",
       "weight": 1.0
     },
     {
@@ -3011,7 +3127,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L283",
+      "source_location": "L362",
       "weight": 1.0
     },
     {
@@ -3023,7 +3139,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L393",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -3035,7 +3151,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L416",
+      "source_location": "L495",
       "weight": 1.0
     },
     {
@@ -3047,7 +3163,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "src/tests.rs",
-      "source_location": "L463",
+      "source_location": "L542",
       "weight": 1.0
     },
     {
@@ -3203,7 +3319,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/agent.rs",
-      "source_location": "L309",
+      "source_location": "L321",
       "weight": 1.0
     },
     {
@@ -3395,7 +3511,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "src/tests.rs",
-      "source_location": "L64",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -4031,7 +4147,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/agent.rs",
-      "source_location": "L180",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -4043,7 +4159,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/agent.rs",
-      "source_location": "L173",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -4055,7 +4171,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "src/agent.rs",
-      "source_location": "L322",
+      "source_location": "L334",
       "weight": 1.0
     },
     {
@@ -4415,7 +4531,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/agent.rs",
-      "source_location": "L333",
+      "source_location": "L345",
       "weight": 1.0
     },
     {
@@ -4439,7 +4555,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "src/tests.rs",
-      "source_location": "L109",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
@@ -4797,6 +4913,17 @@
     },
     {
       "source": "docs_validation_armbian_b860h_validation_\u00e2_2026_10_17",
+      "target": "docs_validation_armbian_discord_deployment_2026_10_18",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "docs/validation-armbian.md",
+      "source_location": "L248",
+      "weight": 1.0
+    },
+    {
+      "source": "docs_validation_armbian_b860h_validation_\u00e2_2026_10_17",
       "target": "docs_validation_armbian_build_and_execution",
       "relation": "contains",
       "_origin": "ast",
@@ -4830,35 +4957,35 @@
     },
     {
       "source": "readme_mornye",
+      "target": "readme_commands_and_checks",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L103",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_mornye",
       "target": "readme_start_on_your_development_machine",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L106",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
       "source": "readme_mornye",
-      "target": "readme_approval_is_enforced_in_code",
+      "target": "readme_tool_approval",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L226",
-      "weight": 1.0
-    },
-    {
-      "source": "readme_mornye",
-      "target": "readme_what_works",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "README.md",
-      "source_location": "L31",
+      "source_location": "L46",
       "weight": 1.0
     },
     {
@@ -4869,7 +4996,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L311",
+      "source_location": "L54",
       "weight": 1.0
     },
     {
@@ -4880,7 +5007,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L386",
+      "source_location": "L69",
+      "weight": 1.0
+    },
+    {
+      "source": "readme_mornye",
+      "target": "readme_what_works",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L7",
       "weight": 1.0
     },
     {
@@ -4891,7 +5029,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L426",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -4902,18 +5040,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L476",
-      "weight": 1.0
-    },
-    {
-      "source": "readme_mornye",
-      "target": "readme_commands_and_checks",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "README.md",
-      "source_location": "L556",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -4946,7 +5073,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L309",
+      "source_location": "L321",
       "weight": 1.0
     },
     {
@@ -4957,7 +5084,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L322",
+      "source_location": "L334",
       "weight": 1.0
     },
     {
@@ -4968,7 +5095,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L333",
+      "source_location": "L345",
       "weight": 1.0
     },
     {
@@ -5166,7 +5293,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/main.rs",
-      "source_location": "L105",
+      "source_location": "L107",
       "weight": 1.0
     },
     {
@@ -5320,23 +5447,23 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L109",
+      "source_location": "L110",
       "weight": 1.0
     },
     {
       "source": "src_tests",
-      "target": "src_tests_approval_is_exact_single_use_and_survives_restart",
+      "target": "src_tests_default_auto_approval_runs_consecutive_shell_commands_without_prompts",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L114",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
       "source": "src_tests",
-      "target": "src_tests_changed_file_cannot_be_deleted_with_old_approval",
+      "target": "src_tests_existing_configs_default_to_auto_approval_and_can_opt_into_manual_review",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -5347,35 +5474,46 @@
     },
     {
       "source": "src_tests",
+      "target": "src_tests_auto_approval_resumes_a_previously_pending_action_once_after_restart",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L162",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_approval_is_exact_single_use_and_survives_restart",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_changed_file_cannot_be_deleted_with_old_approval",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L233",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
       "target": "src_tests_denied_shell_never_runs",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L184",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tests",
-      "target": "src_tests_crash_recovery_marks_execution_uncertain",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/tests.rs",
-      "source_location": "L206",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tests",
-      "target": "src_tests_memories_are_scoped_and_forget_removes_search_result",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/tests.rs",
-      "source_location": "L219",
+      "source_location": "L263",
       "weight": 1.0
     },
     {
@@ -5391,13 +5529,35 @@
     },
     {
       "source": "src_tests",
+      "target": "src_tests_crash_recovery_marks_execution_uncertain",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L285",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_memories_are_scoped_and_forget_removes_search_result",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L298",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
       "target": "src_tests_memory_correction_preserves_lineage_and_removes_false_fact_from_retrieval",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L281",
+      "source_location": "L360",
       "weight": 1.0
     },
     {
@@ -5408,7 +5568,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L337",
+      "source_location": "L416",
       "weight": 1.0
     },
     {
@@ -5419,7 +5579,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L379",
+      "source_location": "L458",
       "weight": 1.0
     },
     {
@@ -5430,40 +5590,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L391",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tests",
-      "target": "src_tests_output_is_bounded_and_failed_commands_are_not_success",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/tests.rs",
-      "source_location": "L410",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tests",
-      "target": "src_tests_context_trimming_preserves_complete_tool_groups",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/tests.rs",
-      "source_location": "L431",
-      "weight": 1.0
-    },
-    {
-      "source": "src_tests",
-      "target": "src_tests_syntax_graph_updates_changed_files_and_flags_deleted_sources",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "src/tests.rs",
-      "source_location": "L461",
+      "source_location": "L470",
       "weight": 1.0
     },
     {
@@ -5479,18 +5606,29 @@
     },
     {
       "source": "src_tests",
-      "target": "src_tests_expired_approval_does_not_execute",
+      "target": "src_tests_output_is_bounded_and_failed_commands_are_not_success",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L514",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
       "source": "src_tests",
-      "target": "src_tests_command_timeout_is_recorded_as_failure",
+      "target": "src_tests_context_trimming_preserves_complete_tool_groups",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L510",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_syntax_graph_updates_changed_files_and_flags_deleted_sources",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -5507,7 +5645,29 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L57",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_expired_approval_does_not_execute",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L593",
+      "weight": 1.0
+    },
+    {
+      "source": "src_tests",
+      "target": "src_tests_command_timeout_is_recorded_as_failure",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/tests.rs",
+      "source_location": "L619",
       "weight": 1.0
     },
     {
@@ -5518,7 +5678,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/tests.rs",
-      "source_location": "L64",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -5661,7 +5821,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L173",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -5672,7 +5832,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L180",
+      "source_location": "L192",
       "weight": 1.0
     },
     {
@@ -5683,7 +5843,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L210",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -5705,7 +5865,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L289",
+      "source_location": "L301",
       "weight": 1.0
     },
     {
@@ -5727,7 +5887,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/agent.rs",
-      "source_location": "L73",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -5738,7 +5898,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/config.rs",
-      "source_location": "L23",
+      "source_location": "L24",
+      "weight": 1.0
+    },
+    {
+      "source": "src_config_config",
+      "target": "src_config_config_approval_mode",
+      "relation": "method",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "src/config.rs",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -5749,7 +5920,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/config.rs",
-      "source_location": "L42",
+      "source_location": "L52",
       "weight": 1.0
     },
     {
@@ -5996,13 +6167,24 @@
     },
     {
       "source": "readme",
+      "target": "docs_research_and_design",
+      "relation": "references",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "README.md",
+      "source_location": "L118",
+      "weight": 1.0
+    },
+    {
+      "source": "readme",
       "target": "docs_upstream_audit",
       "relation": "references",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L21",
+      "source_location": "L5",
       "weight": 1.0
     },
     {
@@ -6013,7 +6195,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L396",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -6024,20 +6206,10 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
-      "source_location": "L486",
-      "weight": 1.0
-    },
-    {
-      "source": "readme",
-      "target": "docs_research_and_design",
-      "relation": "references",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "README.md",
-      "source_location": "L631",
+      "source_location": "L89",
       "weight": 1.0
     }
   ],
-  "hyperedges": []
+  "hyperedges": [],
+  "built_at_commit": "ce0cc40c770e7fd1a72cbaec509c2721c4749d4a"
 }

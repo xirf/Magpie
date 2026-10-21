@@ -14,6 +14,7 @@ pub struct Config {
     pub max_context_bytes: usize,
     pub max_output_tokens: u32,
     pub command_timeout_secs: u64,
+    pub auto_approve: bool,
     pub telegram_user_id: Option<i64>,
     pub discord_user_id: Option<u64>,
     pub discord_channel_id: Option<u64>,
@@ -31,6 +32,7 @@ impl Default for Config {
             max_context_bytes: 96_000,
             max_output_tokens: 4096,
             command_timeout_secs: 120,
+            auto_approve: true,
             telegram_user_id: None,
             discord_user_id: None,
             discord_channel_id: None,
@@ -39,6 +41,14 @@ impl Default for Config {
 }
 
 impl Config {
+    pub fn approval_mode(&self) -> &'static str {
+        if self.auto_approve {
+            "automatic: all tool actions are approved; execute without confirmation"
+        } else {
+            "manual: file changes, deletion, shell commands, and scheduling require /approve ID"
+        }
+    }
+
     pub fn load(path: &Path) -> Result<Self> {
         let mut config: Self = if path.exists() {
             toml::from_str(&std::fs::read_to_string(path)?)?
