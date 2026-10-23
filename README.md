@@ -119,6 +119,24 @@ cargo build --locked --release
 
 Tests use a loopback mock provider and temporary directories. They do not use paid inference or deploy remotely.
 
+## CI builds and tagged releases
+
+GitHub Actions runs formatting, strict Clippy, and tests on Linux and Windows for branch pushes and pull requests. After checks pass, native Ubuntu 22.04 runners build Linux release archives for `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`. The ARM64 runner also runs the release-mode tests. Both binaries run offline startup checks. Rust dependencies and build outputs are cached, and dependency resolution uses `--locked`.
+
+Download `mornye-<target>` from the successful **Rust checks** run's artifacts (retained for 14 days). The ARM64 archive is the one for the verified 64-bit B860H. Windows is tested but is not packaged; ARMv7 is not part of this release matrix. Ubuntu 22.04 gives a glibc 2.35 build baseline; these archives do not target older glibc systems or musl/Alpine.
+
+Pushing a `v*` tag runs the same checks and builds, then publishes a GitHub Release only if all jobs pass. The release contains both `.tar.gz` archives and `SHA256SUMS`. No personal access token or application credentials are needed: only the publication job receives the workflow's built-in `contents: write` permission. Actions are pinned to commit SHAs. The workflow does not deploy or restart the bot.
+
+Before tagging, reconcile any device-only source changes with GitHub and choose the exact commit intended for deployment. A workflow cannot recover unpublished code from the running device. No release tag was created while setting up this pipeline. To release an agreed commit later:
+
+```sh
+git tag -a v<VERSION> <COMMIT> -m 'Release v<VERSION>'
+git push origin v<VERSION>
+```
+
+Each archive includes `mornye`, the example config, README, and `BUILD-INFO.txt` identifying the exact source commit, target, ref, and compiler. After downloading both archives and the manifest into one directory, run `sha256sum --check SHA256SUMS` before extracting. Checksums detect corruption; they are not a cryptographic signature of the publisher. Preserve your existing config, credentials, and complete state directory when installing an update. The release's source provenance identifies what was built; it does not establish that the deployed bot already matches it.
+
+
 Future work: streamed conversational output, interruptible concurrent chat/jobs, native Gemini and ChatGPT subscription adapters, mem0 integration, evaluation-backed skill promotion, richer graph resolution, and specialized deployment verification. ChatGPT subscription access is not implemented by pointing the generic API adapter at a different URL.
 
 The original architecture research is in [docs/research-and-design.md](docs/research-and-design.md).

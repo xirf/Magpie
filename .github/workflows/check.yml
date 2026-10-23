@@ -1,19 +1,105 @@
 name: Rust checks
-on: [push, pull_request]
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
+
 jobs:
   check:
+    name: Checks (${{ matrix.os }})
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          shared-key: checks-${{ matrix.os }}
+          save-if: ${{ github.event_name != 'pull_request' }}
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
-      - run: cargo build --locked --release
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    env:
+      TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
+        with:
+          shared-key: release-${{ matrix.target }}
+          save-if: ${{ github.event_name != 'pull_request' }}
+      - name: Test on native ARM64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: cargo test --locked --release --target "$TARGET"
+      - name: Build release binary
+        run: cargo build --locked --release --target "$TARGET"
+      - name: Smoke-test binary without external services
+        run: |
+          binary="$GITHUB_WORKSPACE/target/$TARGET/release/mornye"
+          "$binary" --version
+          cd "$RUNNER_TEMP"
+          "$binary" doctor
+          "$binary" ask /help
+      - name: Package binary and provenance
+        run: |
+          name="mornye-$TARGET"
+          mkdir -p "dist/$name"
+          cp "target/$TARGET/release/mornye" README.md mornye.example.toml "dist/$name/"
+          printf 'Repository: %s\nCommit: %s\nRef: %s\nTarget: %s\n' \
+            "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$GITHUB_REF" "$TARGET" > "dist/$name/BUILD-INFO.txt"
+          rustc --version >> "dist/$name/BUILD-INFO.txt"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          cd dist
+          sha256sum "$name.tar.gz" > "$name.tar.gz.sha256"
+          sha256sum --check "$name.tar.gz.sha256"
+      - name: Retain release archives
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mornye-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
