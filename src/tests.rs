@@ -63,6 +63,11 @@ fn agent(dir: &Path, base: String) -> Agent {
 }
 
 fn mock(messages: Vec<Value>) -> String {
+    mock_captured(messages).0
+}
+
+pub(crate) fn mock_captured(messages: Vec<Value>) -> (String, std::sync::mpsc::Receiver<Value>) {
+    let (sent_tx, sent_rx) = std::sync::mpsc::channel();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
     std::thread::spawn(move || {
@@ -91,6 +96,7 @@ fn mock(messages: Vec<Value>) -> String {
                         let sent: Value =
                             serde_json::from_slice(&request[end + 4..end + 4 + len]).unwrap();
                         assert!(sent["messages"].is_array());
+                        let _ = sent_tx.send(sent);
                         break;
                     }
                 }
@@ -104,7 +110,7 @@ fn mock(messages: Vec<Value>) -> String {
             write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).unwrap();
         }
     });
-    format!("http://{addr}")
+    (format!("http://{addr}"), sent_rx)
 }
 
 fn call(name: &str, args: Value) -> Value {
@@ -634,4 +640,50 @@ async fn command_timeout_is_recorded_as_failure() {
     .unwrap();
     assert_eq!(result["timed_out"], true);
     assert_eq!(result["success"], false);
+}
+
+#[tokio::test]
+async fn discord_conversation_gets_persona_and_channel_context_without_tools() {
+    let dir = tempfile::tempdir().unwrap();
+    let (base, requests) = mock_captured(vec![
+        json!({"role":"assistant","content":"A quiet evening sounds lovely. What's on your mind?"}),
+    ]);
+    let agent = agent(dir.path(), base);
+    let reply = agent
+        .input("discord:42:10", "Can we just talk for a while?")
+        .await
+        .unwrap();
+    assert!(reply.contains("quiet evening"));
+    let request = requests.recv().unwrap();
+    let instructions = request["messages"][0]["content"].as_str().unwrap();
+    assert!(instructions.contains("general-purpose personal assistant"));
+    assert!(instructions.contains("Channel: Discord"));
+    assert!(instructions.contains("never use pipe tables"));
+    assert!(instructions.contains("calm warmth"));
+    let count: i64 = agent
+        .store
+        .0
+        .query_row("SELECT count(*) FROM actions", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 0);
+}
+
+#[tokio::test]
+async fn cli_context_does_not_claim_to_be_discord() {
+    let dir = tempfile::tempdir().unwrap();
+    let (base, requests) = mock_captured(vec![json!({"role":"assistant","content":"Hello."})]);
+    let agent = agent(dir.path(), base);
+    agent.input("cli", "Hello").await.unwrap();
+    let request = requests.recv().unwrap();
+    let instructions = request["messages"][0]["content"].as_str().unwrap();
+    assert!(instructions.contains("Channel: local CLI."));
+    assert!(!instructions.contains("Channel: Discord"));
+}
+
+#[test]
+fn empty_provider_success_is_rejected() {
+    for content in [json!(null), json!(""), json!("  ")] {
+        assert!(provider::validate(&json!({"role":"assistant","content":content})).is_err());
+    }
+    assert!(provider::validate(&call("read_file", json!({"path":"notes.txt"}))).is_ok());
 }

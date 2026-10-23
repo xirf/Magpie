@@ -91,5 +91,15 @@ pub fn validate(message: &Value) -> Result<()> {
             );
         }
     }
+    let has_tools = message["tool_calls"]
+        .as_array()
+        .is_some_and(|calls| !calls.is_empty());
+    ensure!(
+        has_tools
+            || message["content"]
+                .as_str()
+                .is_some_and(|text| !text.trim().is_empty()),
+        "Provider returned no response text or tool calls"
+    );
     Ok(())
 }

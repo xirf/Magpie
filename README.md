@@ -1,6 +1,6 @@
 # Mornye
 
-A Rust personal assistant for a small always-on computer. Hosted inference, SQLite memory, a persistent personality, local code indexing, and direct host tools with automatic approval by default.
+A general-purpose Rust personal assistant for conversation, learning, planning, writing, and practical help on a small always-on computer. Hosted inference, SQLite memory, a persistent personality, local code indexing, and direct host tools with automatic approval by default.
 
 Source-grounded revision notes and remaining gaps: [upstream audit](docs/upstream-audit.md).
 
@@ -59,6 +59,12 @@ Tools run directly with the host user's access. Both modes preserve input valida
 4. Run `mornye serve` and DM the bot. For a server channel, set `discord_channel_id`, enable Message Content Intent, and invite the bot with View Channel and Send Messages permissions.
 
 The owner ID is mandatory. Other users, bots, webhooks, and other channels are ignored. Without a channel ID, only DMs are accepted. With a channel ID, only that exact channel is accepted. Message commands such as `/approve UUID` are ordinary message text, not registered Discord application slash commands. Attachments, voice, and message edits are not processed.
+
+Mornye receives explicit Discord context: conversational replies in the user's language, her calm and warm persona, and short paragraphs or useful lists instead of Markdown tables. Existing `SOUL.md` and `MORNYE_PROFILE.md` edits are preserved. Coding remains available when requested.
+
+While a request runs, the bot sends a short status message, refreshes Discord's typing indicator about every four seconds, and edits that status when activity changes (for example, thinking or running a command). Status text comes from runtime events and excludes tool arguments and private reasoning. The first final reply chunk replaces the status; any remaining chunks are sent afterward. The status message ID is persisted so crash recovery can replace it with an interruption notice. If the status was deleted, final delivery falls back to a new message. Status and typing requests are best effort with short timeouts; final replies remain in the durable delivery queue until acknowledged. Blocking host work can delay refreshes, and a timeout after Discord accepts a status can leave an orphan status message.
+
+Design rationale, reference mapping, and validation limits: [conversational harness](docs/conversational-harness.md).
 
 Serenity manages gateway heartbeat, reconnection and rate limits on a dedicated runtime. Its guild/member cache and command framework are disabled. Requests are persisted before model execution, deduplicated by Discord message ID, and bounded to 64 waiting/running requests. A restart preserves queued requests; interrupted running requests are reported and never replayed automatically. Replies are committed together with request completion and delivered in UTF-16-bounded chunks with mentions disabled. A crash after Discord accepts a reply but before local acknowledgement can duplicate that reply chunk. Messages sent while fully offline are not backfilled. This is not exactly-once delivery.
 

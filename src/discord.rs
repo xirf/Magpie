@@ -5,8 +5,8 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serenity::{
     Client,
     all::{
-        ChannelId, Context, CreateAllowedMentions, CreateMessage, EventHandler, GatewayIntents,
-        Http, Message,
+        ChannelId, Context, CreateAllowedMentions, CreateMessage, EditMessage, EventHandler,
+        GatewayIntents, Http, Message, MessageId,
     },
     async_trait,
 };
@@ -25,6 +25,16 @@ impl Queue {
             CREATE TABLE IF NOT EXISTS inbox(id TEXT PRIMARY KEY, channel TEXT NOT NULL, body TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'queued');
             CREATE TABLE IF NOT EXISTS outbox(id INTEGER PRIMARY KEY, channel TEXT NOT NULL, body TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS binding(owner TEXT NOT NULL, channel TEXT NOT NULL);")?;
+        // Additive migration preserves existing queues and undelivered replies.
+        for (table, column) in [("inbox", "progress_message"), ("outbox", "message_id")] {
+            let mut stmt = db.prepare(&format!("PRAGMA table_info({table})"))?;
+            let columns = stmt
+                .query_map([], |r| r.get::<_, String>(1))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            if !columns.iter().any(|c| c == column) {
+                db.execute(&format!("ALTER TABLE {table} ADD COLUMN {column} TEXT"), [])?;
+            }
+        }
         Ok(Self(db))
     }
     fn bind(&self, owner: u64, channel: Option<u64>) -> Result<()> {
@@ -74,7 +84,7 @@ impl Queue {
     }
     pub fn recover(&mut self) -> Result<()> {
         let tx = self.0.transaction()?;
-        tx.execute("INSERT INTO outbox(channel,body) SELECT channel,'Mornye restarted during a request. Inspect /status and /pending before /retry. The request was not replayed.' FROM inbox WHERE status='running'", [])?;
+        tx.execute("INSERT INTO outbox(channel,body,message_id) SELECT channel,'I restarted while working on your request. I have not replayed it. Use /status and /pending to inspect it, then /retry when you are ready.',progress_message FROM inbox WHERE status='running'", [])?;
         tx.execute(
             "UPDATE inbox SET status='interrupted' WHERE status='running'",
             [],
@@ -93,25 +103,128 @@ impl Queue {
     }
     pub fn finish(&mut self, id: &str, channel: &str, reply: &str) -> Result<()> {
         let tx = self.0.transaction()?;
-        for chunk in chunks(reply) {
+        let message_id: Option<String> = tx.query_row(
+            "SELECT progress_message FROM inbox WHERE id=?1",
+            [id],
+            |r| r.get(0),
+        )?;
+        for (index, chunk) in chunks(reply).into_iter().enumerate() {
             tx.execute(
-                "INSERT INTO outbox(channel,body) VALUES(?1,?2)",
-                params![channel, chunk],
+                "INSERT INTO outbox(channel,body,message_id) VALUES(?1,?2,?3)",
+                params![
+                    channel,
+                    chunk,
+                    if index == 0 {
+                        message_id.as_deref()
+                    } else {
+                        None
+                    }
+                ],
             )?;
         }
         tx.execute("UPDATE inbox SET status='done',body='' WHERE id=?1", [id])?;
         tx.commit()?;
         Ok(())
     }
-    fn next_reply(&self) -> Result<Option<(i64, String, String)>> {
+    fn next_reply(&self) -> Result<Option<Reply>> {
         Ok(self
             .0
             .query_row(
-                "SELECT id,channel,body FROM outbox ORDER BY id LIMIT 1",
+                "SELECT id,channel,body,message_id FROM outbox ORDER BY id LIMIT 1",
                 [],
-                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                |r| {
+                    Ok(Reply {
+                        id: r.get(0)?,
+                        channel: r.get(1)?,
+                        body: r.get(2)?,
+                        message_id: r.get(3)?,
+                    })
+                },
             )
             .optional()?)
+    }
+}
+
+struct Reply {
+    id: i64,
+    channel: String,
+    body: String,
+    message_id: Option<String>,
+}
+fn edit_builder(text: &str) -> EditMessage {
+    EditMessage::new().content(text).allowed_mentions(
+        CreateAllowedMentions::new()
+            .everyone(false)
+            .all_users(false)
+            .all_roles(false)
+            .replied_user(false),
+    )
+}
+async fn deliver(http: &Http, reply: &Reply) -> Result<()> {
+    let channel = ChannelId::new(reply.channel.parse()?);
+    if let Some(id) = &reply.message_id {
+        match channel
+            .edit_message(http, MessageId::new(id.parse()?), edit_builder(&reply.body))
+            .await
+        {
+            Ok(_) => return Ok(()),
+            // A deleted status must not permanently block the durable reply queue.
+            Err(serenity::Error::Http(error))
+                if error.status_code().is_some_and(|s| s.as_u16() == 404) => {}
+            Err(error) => return Err(error.into()),
+        }
+    }
+    channel
+        .send_message(http, reply_builder(&reply.body))
+        .await?;
+    Ok(())
+}
+
+async fn respond(
+    agent: &Agent,
+    queue: &Arc<Mutex<Queue>>,
+    http: &Http,
+    id: &str,
+    channel: &str,
+    session: &str,
+    body: &str,
+) -> Result<String> {
+    let channel_id = ChannelId::new(channel.parse()?);
+    let mut progress = agent.subscribe_progress();
+    let status = tokio::time::timeout(
+        Duration::from_secs(3),
+        channel_id.send_message(http, reply_builder("I'm here. Let me think…")),
+    )
+    .await;
+    let message_id = match status {
+        Ok(Ok(message)) => {
+            queue.lock().expect("queue mutex").0.execute(
+                "UPDATE inbox SET progress_message=?1 WHERE id=?2",
+                params![message.id.to_string(), id],
+            )?;
+            Some(message.id)
+        }
+        _ => None, // Status is best effort; it never authorizes or blocks work.
+    };
+    let mut last_text = "I'm here. Let me think…";
+    let mut ticks = tokio::time::interval(Duration::from_secs(4));
+    ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let work = agent.input(session, body);
+    tokio::pin!(work);
+    loop {
+        tokio::select! {
+            reply = &mut work => return reply,
+            _ = ticks.tick() => {
+                let _ = tokio::time::timeout(Duration::from_secs(2), channel_id.broadcast_typing(http)).await;
+                let text = progress.borrow_and_update().text();
+                if text != last_text
+                    && let Some(message_id) = message_id
+                    && matches!(tokio::time::timeout(Duration::from_secs(2), channel_id.edit_message(http, message_id, edit_builder(text))).await, Ok(Ok(_)))
+                {
+                    last_text = text;
+                }
+            }
+        }
     }
 }
 
@@ -252,17 +365,14 @@ pub async fn serve(agent: &Agent) -> Result<()> {
             Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {}
         }
         let pending_reply = queue.lock().expect("queue mutex").next_reply()?;
-        if let Some((id, channel, body)) = pending_reply {
-            match ChannelId::new(channel.parse()?)
-                .send_message(&http, reply_builder(&body))
-                .await
-            {
+        if let Some(reply) = pending_reply {
+            match deliver(&http, &reply).await {
                 Ok(_) => {
                     queue
                         .lock()
                         .expect("queue mutex")
                         .0
-                        .execute("DELETE FROM outbox WHERE id=?1", [id])?;
+                        .execute("DELETE FROM outbox WHERE id=?1", [reply.id])?;
                 }
                 Err(_) => {
                     eprintln!("Discord reply delivery failed; retained for retry.");
@@ -274,7 +384,7 @@ pub async fn serve(agent: &Agent) -> Result<()> {
         let request = queue.lock().expect("queue mutex").claim()?;
         if let Some((id, channel, body)) = request {
             let session = format!("discord:{owner}:{channel}");
-            let reply = match agent.input(&session, &body).await {
+            let reply = match respond(agent, &queue, &http, &id, &channel, &session, &body).await {
                 Ok(reply) => reply,
                 Err(error) => format!(
                     "Request stopped: {error}\nInspect /status. /retry resumes; /cancel stops the turn."
@@ -356,5 +466,218 @@ mod tests {
         q.claim().unwrap();
         q.finish("124", "10", "reply").unwrap();
         assert!(q.claim().unwrap().is_none());
+    }
+    #[test]
+    fn status_target_survives_restart_and_only_first_chunk_edits_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("discord.db");
+        // Exercise migration from the original schema, preserving an older reply.
+        let db = Connection::open(&path).unwrap();
+        db.execute_batch("CREATE TABLE inbox(id TEXT PRIMARY KEY,channel TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'queued'); CREATE TABLE outbox(id INTEGER PRIMARY KEY,channel TEXT NOT NULL,body TEXT NOT NULL); INSERT INTO outbox(channel,body) VALUES('10','older reply');").unwrap();
+        drop(db);
+        let mut q = Queue::open(&path).unwrap();
+        assert_eq!(q.next_reply().unwrap().unwrap().body, "older reply");
+        q.0.execute("DELETE FROM outbox", []).unwrap();
+        q.enqueue("123", "10", "hello").unwrap();
+        q.claim().unwrap();
+        q.0.execute("UPDATE inbox SET progress_message='99' WHERE id='123'", [])
+            .unwrap();
+        drop(q);
+        let mut q = Queue::open(&path).unwrap();
+        q.recover().unwrap();
+        let recovered = q.next_reply().unwrap().unwrap();
+        assert_eq!(recovered.message_id.as_deref(), Some("99"));
+        assert!(recovered.body.contains("not replayed"));
+        q.0.execute("DELETE FROM outbox", []).unwrap();
+        q.enqueue("124", "10", "next").unwrap();
+        q.claim().unwrap();
+        q.0.execute("UPDATE inbox SET progress_message='100' WHERE id='124'", [])
+            .unwrap();
+        q.finish("124", "10", &"🙂".repeat(1200)).unwrap();
+        let first = q.next_reply().unwrap().unwrap();
+        assert_eq!(first.message_id.as_deref(), Some("100"));
+        q.0.execute("DELETE FROM outbox WHERE id=?1", [first.id])
+            .unwrap();
+        assert!(q.next_reply().unwrap().unwrap().message_id.is_none());
+        drop(q);
+        let mut q = Queue::open(&path).unwrap();
+        q.recover().unwrap();
+        assert!(q.claim().unwrap().is_none());
+    }
+
+    struct DiscordMock {
+        http: Http,
+        requests: std::sync::mpsc::Receiver<(String, serde_json::Value)>,
+        stop: Arc<std::sync::atomic::AtomicBool>,
+        thread: Option<std::thread::JoinHandle<()>>,
+    }
+    impl DiscordMock {
+        fn new(deleted: bool) -> Self {
+            use std::{
+                io::{Read, Write},
+                net::TcpListener,
+                sync::atomic::{AtomicBool, Ordering},
+            };
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let addr = listener.local_addr().unwrap();
+            listener.set_nonblocking(true).unwrap();
+            let stop = Arc::new(AtomicBool::new(false));
+            let shutdown = stop.clone();
+            let (tx, requests) = std::sync::mpsc::channel();
+            let thread = std::thread::spawn(move || {
+                while !shutdown.load(Ordering::Relaxed) {
+                    let (mut socket, _) = match listener.accept() {
+                        Ok(pair) => pair,
+                        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                            std::thread::sleep(Duration::from_millis(5));
+                            continue;
+                        }
+                        Err(e) => panic!("{e}"),
+                    };
+                    socket
+                        .set_read_timeout(Some(Duration::from_secs(5)))
+                        .unwrap();
+                    let mut request = Vec::new();
+                    let mut buffer = [0u8; 4096];
+                    let (route, body) = loop {
+                        let n = socket.read(&mut buffer).unwrap();
+                        assert!(n > 0);
+                        request.extend_from_slice(&buffer[..n]);
+                        if let Some(end) = request.windows(4).position(|w| w == b"\r\n\r\n") {
+                            let headers = String::from_utf8_lossy(&request[..end]);
+                            let len = headers
+                                .lines()
+                                .find_map(|l| {
+                                    l.to_lowercase()
+                                        .strip_prefix("content-length:")
+                                        .map(|v| v.trim().parse::<usize>().unwrap())
+                                })
+                                .unwrap_or(0);
+                            if request.len() >= end + 4 + len {
+                                let body = if len == 0 {
+                                    serde_json::Value::Null
+                                } else {
+                                    serde_json::from_slice(&request[end + 4..end + 4 + len])
+                                        .unwrap()
+                                };
+                                break (headers.lines().next().unwrap().to_owned(), body);
+                            }
+                        }
+                    };
+                    let (status, response) = if route.contains("/typing") {
+                        ("204 No Content", String::new())
+                    } else if deleted && route.starts_with("PATCH") {
+                        (
+                            "404 Not Found",
+                            r#"{"code":10008,"message":"Unknown Message"}"#.to_owned(),
+                        )
+                    } else {
+                        let mut message = Message::default();
+                        message.id = MessageId::new(99);
+                        message.channel_id = ChannelId::new(10);
+                        message.author.id = serenity::all::UserId::new(42);
+                        message.content = body["content"].as_str().unwrap_or("").to_owned();
+                        ("200 OK", serde_json::to_string(&message).unwrap())
+                    };
+                    tx.send((route, body)).unwrap();
+                    write!(socket, "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{response}", response.len()).unwrap();
+                }
+            });
+            Self {
+                http: serenity::http::HttpBuilder::new("test-token")
+                    .proxy(format!("http://{addr}"))
+                    .ratelimiter_disabled(true)
+                    .build(),
+                requests,
+                stop,
+                thread: Some(thread),
+            }
+        }
+    }
+    impl Drop for DiscordMock {
+        fn drop(&mut self) {
+            self.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            self.thread.take().unwrap().join().unwrap();
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn slow_tool_shows_typing_and_edits_status_into_final_reply() {
+        use serde_json::json;
+        let dir = tempfile::tempdir().unwrap();
+        let (base, _) = crate::tests::mock_captured(vec![
+            json!({"role":"assistant","content":null,"tool_calls":[{"id":"slow-tool","type":"function","function":{"name":"shell","arguments":json!({"command":"sleep 5","purpose":"Wait to exercise visible progress"}).to_string()}}]}),
+            json!({"role":"assistant","content":"All done. Let's carry on."}),
+        ]);
+        let config = crate::config::Config {
+            workspace: dir.path().to_owned(),
+            state_dir: dir.path().join("state"),
+            api_base: base,
+            api_key_env: "PATH".into(),
+            ..Default::default()
+        };
+        std::fs::create_dir_all(&config.state_dir).unwrap();
+        let agent = Agent::new(config).unwrap();
+        let mut queue = Queue::open(&dir.path().join("queue.db")).unwrap();
+        queue.enqueue("123", "10", "Wait a moment").unwrap();
+        queue.claim().unwrap();
+        let queue = Arc::new(Mutex::new(queue));
+        let discord = DiscordMock::new(false);
+        let reply = respond(
+            &agent,
+            &queue,
+            &discord.http,
+            "123",
+            "10",
+            "discord:42:10",
+            "Wait a moment",
+        )
+        .await
+        .unwrap();
+        queue.lock().unwrap().finish("123", "10", &reply).unwrap();
+        let queued = queue.lock().unwrap().next_reply().unwrap().unwrap();
+        deliver(&discord.http, &queued).await.unwrap();
+        let calls: Vec<_> = discord.requests.try_iter().collect();
+        assert!(calls.iter().filter(|(r, _)| r.contains("/typing")).count() >= 2);
+        assert_eq!(
+            calls
+                .iter()
+                .filter(|(r, _)| r.starts_with("POST") && r.contains("/messages"))
+                .count(),
+            1
+        );
+        assert!(
+            calls
+                .iter()
+                .any(|(r, b)| r.starts_with("PATCH") && b["content"] == "I'm running a command…")
+        );
+        assert_eq!(calls.last().unwrap().1["content"], reply);
+        for (route, body) in &calls {
+            if route.contains("/messages") {
+                assert_eq!(body["allowed_mentions"]["parse"], json!([]));
+                assert!(!body.to_string().contains("sleep 5"));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn deleted_status_falls_back_to_new_reply() {
+        let discord = DiscordMock::new(true);
+        deliver(
+            &discord.http,
+            &Reply {
+                id: 1,
+                channel: "10".into(),
+                body: "Here is your answer.".into(),
+                message_id: Some("99".into()),
+            },
+        )
+        .await
+        .unwrap();
+        let calls: Vec<_> = discord.requests.try_iter().collect();
+        assert_eq!(calls.len(), 2);
+        assert!(calls[0].0.starts_with("PATCH"));
+        assert!(calls[1].0.starts_with("POST"));
     }
 }
